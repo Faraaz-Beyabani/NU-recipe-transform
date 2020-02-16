@@ -35,26 +35,41 @@ def fetch_directions(recipe):
     dir_list = recipe.find('ol', class_='recipe-directions__list').find_all('li')
     return [d.span.text.strip() for d in dir_list]
 
+def main():
+    while True:
+        recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to exit.\n")
+        # recipe_url = "https://www.allrecipes.com/recipe/213268/classic-goulash/?internalSource=popular&referringContentType=Homepage"
+        if recipe_url == 'q':
+            return
+        if 'allrecipes.com/recipe' not in recipe_url:
+            continue
+
+        name, ingredients, directions = fetch_recipe(recipe_url)
+        fresh = True
+
+        openers = ['Wow!', 'Oh,', 'Huh,']
+        closers = ['Sounds tasty!', 'Smells delicious.', 'Looks great!']
+        options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it non-vegetarian', 
+                    'Make it healthier', 'Make it unhealthier', 'Make it CUISINE TYPE', 'Make it CUISINE TYPE', 
+                    'Double it', 'Halve the amount']
+        
+        print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
+
+        while True:
+            for i,o in enumerate(options):
+                print(f'[{i}] {o}')
+
+            n = int(input('\nWhat do you want to do with it?\n'))
+
+            if n == 0:
+                return
+            elif n == 1:
+                break
+            elif n >= len(options):
+                print(f'\nInvalid selection: {n}\n')
+            else:
+                # TODO actually do stuff
+                pass
 
 if __name__ == "__main__":
-    # recipe_url = input("Please enter the URL of a recipe from allrecipes.com.")
-    recipe_url = "https://www.allrecipes.com/recipe/213268/classic-goulash/?internalSource=popular&referringContentType=Homepage"
-    name, ingredients, directions = fetch_recipe(recipe_url)
-    fresh = True
-
-    openers = ['Wow!', 'Oh,', 'Huh,']
-    closers = ['Sounds tasty!', 'Smells delicious.', 'Looks great!']
-    options = ['Exit', 'Make it vegetarian', 'Make it non-vegetarian', 'Make it healthier', 
-                'Make it unhealthier', 'Make it CUISINE TYPE', 'Make it CUISINE TYPE', 'Double it', 
-                'Halve the amount']
-    
-    print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
-
-    while True:
-        for i,o in enumerate(options):
-            print(f'[{i}] {o}')
-
-        n = int(input('What do you want to do with it?\n'))
-
-        if n == 0 or n >= len(options):
-            break
+    main()
