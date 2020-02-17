@@ -1,8 +1,10 @@
 import re
 import random
 import requests
+import nltk
 
 from bs4 import BeautifulSoup
+from nltk.tokenize import word_tokenize
 
 
 def fetch_recipe(url):
@@ -18,11 +20,27 @@ def fetch_recipe(url):
     return name, ingredients, directions
 
 def fetch_ingredients(recipe):
+    nltk.download('punkt')
     ing_lists = recipe.find_all('ul', id=re.compile(r'lst_ingredients.*'))
     ingredients = []
     for sub_list in ing_lists:
         ingredients += [i for i in [parse_ingredient(i) for i in sub_list] if i]
-
+    temp_ing = [nltk.pos_tag(word_tokenize(i)) for i in ingredients]
+#    for i in range(len(ingredients)):
+#        temp_ing = ingredients[i].split(',')
+#        temp_ing[0] = temp_ing[0].split()
+#        quantity = temp_ing[0][0]
+#        descriptor = []
+#        if temp_ing[0][1][0] == "(" and temp_ing[0][2][-1] == ")":
+#            measurement = temp_ing[0][3]
+#            paren = " ".join([temp_ing[0][1][1:], temp_ing[0][2][:-1]])
+#            temp_ing[0] = temp_ing[0][:2] + temp_ing[0][3:]
+#            temp_ing[0][1] = paren
+#            descriptor += [paren]
+            
+        
+    print(temp_ing)
+        
     return ingredients
 
 def parse_ingredient(ingredient):
@@ -39,6 +57,7 @@ def main():
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to exit.\n")
         # recipe_url = "https://www.allrecipes.com/recipe/213268/classic-goulash/?internalSource=popular&referringContentType=Homepage"
+        
         if recipe_url == 'q':
             return
         if 'allrecipes.com/recipe' not in recipe_url:
