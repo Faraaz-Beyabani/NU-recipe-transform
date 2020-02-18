@@ -26,20 +26,43 @@ def fetch_ingredients(recipe):
     for sub_list in ing_lists:
         ingredients += [i for i in [parse_ingredient(i) for i in sub_list] if i]
     temp_ing = [nltk.pos_tag(word_tokenize(i)) for i in ingredients]
-#    for i in range(len(ingredients)):
-#        temp_ing = ingredients[i].split(',')
-#        temp_ing[0] = temp_ing[0].split()
-#        quantity = temp_ing[0][0]
-#        descriptor = []
-#        if temp_ing[0][1][0] == "(" and temp_ing[0][2][-1] == ")":
-#            measurement = temp_ing[0][3]
-#            paren = " ".join([temp_ing[0][1][1:], temp_ing[0][2][:-1]])
-#            temp_ing[0] = temp_ing[0][:2] + temp_ing[0][3:]
-#            temp_ing[0][1] = paren
-#            descriptor += [paren]
-            
-        
-    print(temp_ing)
+
+    measurements = set()
+    ing_stats = []
+    for i, split_ing in enumerate(temp_ing):
+        ing_dict = {'quantity':0, 'measure':'', 'item':'', 'prep':[], 'descriptor':[]}
+        for j, part in enumerate(split_ing):
+            if j == 0:
+                ing_dict['quantity'] = part[0]
+            elif part[1] in ['VBD', 'VBN']:
+                prep = part[0]
+                pre = split_ing[j-1]
+                if pre[1] == 'RB':
+                    prep = pre[0] + ' ' + prep
+                ing_dict['prep'] += [prep]
+            elif part[1] == '(':
+                measure = ''
+                t = ingredients[i].split()
+                for m,r in enumerate(t):
+                    if r[0] == '(':
+                        for n,s in enumerate(t):
+                            if s[-1] == ')':
+                                measure += ' '.join(t[m:n+2])
+                ing_dict['measure'] = measure
+                measurements.add(measure)
+            elif j == 1 and part[1] != 'JJ':
+                ing_dict['measure'] = part[0]
+                measurements.add(part[0])
+            elif j == 1 and part[1] == 'JJ' and part[0] in measurements:
+                ing_dict['measure'] = part[0]
+
+
+        ing_stats.append(ing_dict)
+
+    for i in range(len(temp_ing)):
+        print(temp_ing[i])
+        print(ing_stats[i])
+        print('\n')
         
     return ingredients
 
@@ -73,6 +96,8 @@ def main():
                     'Double it', 'Halve the amount']
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
+
+        return
 
         while True:
             for i,o in enumerate(options):
