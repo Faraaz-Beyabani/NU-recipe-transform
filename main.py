@@ -40,14 +40,8 @@ def fetch_ingredients(recipe):
                 if pre[1] == 'RB':
                     prep = pre[0] + ' ' + prep
                 ing_dict['prep'] += [prep]
-            elif part[1] == '(':
-                measure = ''
-                t = ingredients[i].split()
-                for m,r in enumerate(t):
-                    if r[0] == '(':
-                        for n,s in enumerate(t):
-                            if s[-1] == ')':
-                                measure += ' '.join(t[m:n+2])
+            elif part[0] == '(':
+                measure = re.search(r'\(.*\) [a-zA-Z]*', ingredients[i]).group()
                 ing_dict['measure'] = measure
                 measurements.add(measure)
             elif j == 1 and part[1] != 'JJ':
@@ -55,6 +49,10 @@ def fetch_ingredients(recipe):
                 measurements.add(part[0])
             elif j == 1 and part[1] == 'JJ' and part[0] in measurements:
                 ing_dict['measure'] = part[0]
+            elif int(ing_dict['quantity']) > 1 and part[1] == 'NNS':
+                ing_dict['measure'] = part[0]
+            else:
+                ing_dict['item'] += part[0] + ' '
 
 
         ing_stats.append(ing_dict)
