@@ -31,31 +31,58 @@ def fetch_ingredients(recipe):
     ing_stats = []
     for i, split_ing in enumerate(temp_ing):
         ing_dict = {'quantity':0, 'measure':'', 'item':'', 'prep':[], 'descriptor':[]}
+        item = []
+        measure = False
         for j, part in enumerate(split_ing):
             if j == 0:
-                ing_dict['quantity'] = part[0]
-            elif part[1] in ['VBD', 'VBN']:
-                prep = part[0]
-                pre = split_ing[j-1]
-                if pre[1] == 'RB':
-                    prep = pre[0] + ' ' + prep
-                ing_dict['prep'] += [prep]
-            elif part[0] == '(':
-                measure = re.search(r'\(.*\) [a-zA-Z]*', ingredients[i]).group()
-                ing_dict['measure'] = measure
-                measurements.add(measure)
-            elif j == 1 and part[1] != 'JJ':
-                if part[1] == 'NNS' and int(ing_dict['quantity']) > 1:
+                ing_dict['quantity'] = str(eval(part[0]))
+            elif part[1] == 'CD' and not any(part[0] in v for v in ing_dict.values()):
+                ing_dict['quantity'] = str(float(ing_dict['quantity']) + eval(part[0]))
+
+            elif split_ing[j-1][1] == 'CD' and part[0] == '(':
+                m = re.search(r'\(.*\) [a-zA-Z]*', ingredients[i]).group()
+                if not ing_dict['measure']:
+                    ing_dict['measure'] = m
+                    measurements.add(m)
+            elif (split_ing[j-1][1] == 'CD' 
+                and ((part[1] == 'NNS' and float(ing_dict['quantity']) > 1) 
+                    or (part[1] == 'NN' and float(ing_dict['quantity']) <= 1))
+                    or (part[1] == 'JJ' and part[0] in measurements and not ing_dict['measure'])):
+                if not ing_dict['measure']:
                     ing_dict['measure'] = part[0]
                     measurements.add(part[0])
-                elif part[1] == 'NN':
-                    ing_dict['measure'] = part[0]
-                    measurements.add(part[0])
-            elif j == 1 and part[1] == 'JJ' and part[0] in measurements:
-                ing_dict['measure'] = part[0]
+            # elif part[1] != 'JJ' and not ing_dict['measure']:
+            #     if part[1] == 'NNS' and float(ing_dict['quantity']) > 1:
+            #         ing_dict['measure'] = part[0]
+            #         measurements.add(part[0])
+            #     elif part[1] == 'NN':
+            #         ing_dict['measure'] = part[0]
+            #         measurements.add(part[0])
+            elif part[0] == ',':
+                sub = split_ing[j+1:]
+                for k, sub_part in enumerate(sub):
+                    if sub_part[1] in ['VBD', 'VBN']:
+                        if sub[k-1][1] == 'RB':
+                            ing_dict['prep'] += [sub[k-1][0] + ' ' + sub_part[0]]
+                        else:
+                            ing_dict['prep'] += [sub_part[0]]
+                break
+
+        #     elif part[1] in ['VBD', 'VBN']:
+        #         desc = part[0]
+        #         pre = split_ing[j-1]
+        #         if pre[1] == 'RB':
+        #             desc = pre[0] + ' ' + desc
+        #         ing_dict['descriptor'] += [desc]
             else:
-                if not any(part[0] in v for v in ing_dict.values()):
-                    ing_dict['item'] += [part[0]]
+                if not any(part[0] in v for v in ing_dict.values()) and len(part[0]) > 1:
+                    item += [part[0]]
+        if not ing_dict['measure']:
+            ing_dict['measure']
+        if item:
+            ing_dict['item'] = ' '.join(item)
+        else:
+            ing_dict['item'] = ing_dict['measure']
 
 
         ing_stats.append(ing_dict)
@@ -64,11 +91,11 @@ def fetch_ingredients(recipe):
         print(temp_ing[i])
         print(ing_stats[i])
         print('\n')
-        
-    return ingredients
+    return ing_stats
 
 def parse_ingredient(ingredient):
-    if (label := ingredient.find('label')) != -1:
+    label = ingredient.find('label')
+    if label != -1:
         return label.attrs.get('title')
 
     return None
@@ -79,8 +106,14 @@ def fetch_directions(recipe):
 
 def main():
     while True:
-        recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to exit.\n")
-        # recipe_url = "https://www.allrecipes.com/recipe/213268/classic-goulash/?internalSource=popular&referringContentType=Homepage"
+        recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
+        # https://www.allrecipes.com/recipe/213268/classic-goulash/
+        # https://www.allrecipes.com/recipe/16212/chocolate-mint-candies-cookies/
+        # https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/
+        # https://www.allrecipes.com/recipe/268669/creamy-shrimp-scampi-with-half-and-half/
+        # https://www.allrecipes.com/recipe/10477/chocolate-mint-cookies-i/
+
+
         
         if recipe_url == 'q':
             return
