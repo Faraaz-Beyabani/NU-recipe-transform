@@ -45,14 +45,17 @@ def fetch_ingredients(recipe):
                 ing_dict['measure'] = measure
                 measurements.add(measure)
             elif j == 1 and part[1] != 'JJ':
-                ing_dict['measure'] = part[0]
-                measurements.add(part[0])
+                if part[1] == 'NNS' and int(ing_dict['quantity']) > 1:
+                    ing_dict['measure'] = part[0]
+                    measurements.add(part[0])
+                elif part[1] == 'NN':
+                    ing_dict['measure'] = part[0]
+                    measurements.add(part[0])
             elif j == 1 and part[1] == 'JJ' and part[0] in measurements:
                 ing_dict['measure'] = part[0]
-            elif int(ing_dict['quantity']) > 1 and part[1] == 'NNS':
-                ing_dict['measure'] = part[0]
             else:
-                ing_dict['item'] += part[0] + ' '
+                if not any(part[0] in v for v in ing_dict.values()):
+                    ing_dict['item'] += [part[0]]
 
 
         ing_stats.append(ing_dict)
