@@ -141,7 +141,7 @@ def parse_directions(directions, ingredient_stats):
                 step_stats['methods'].append(word)
                 split_step[i] = '{method}'
 
-            elif word in ingredients:
+            elif any(word in i.split() for i in ingredients):
                 step_stats['ingredients'].append(word)
                 split_step[i] = '{ingredient}'
 
