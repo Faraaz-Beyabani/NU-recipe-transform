@@ -131,8 +131,6 @@ def parse_directions(dirs):
         posd = [nltk.pos_tag(word) for word in words]
         print(posd)
 
-
-    step_template = {ingredients:_, tools:_, methods:_, times:_}
     return dirs
 
 def scrape_directions(recipe):
@@ -164,7 +162,7 @@ def main():
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
 
-        return
+        # return
 
         while True:
             for i,o in enumerate(options):
@@ -242,7 +240,7 @@ mochi stuff
 
 --------------------------------------------------------------------------------------------
 
-?? *** 
+?? *** To/From Vegan
 
 '''
 
