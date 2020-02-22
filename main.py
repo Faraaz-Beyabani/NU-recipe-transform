@@ -2,9 +2,24 @@ import re
 import random
 import requests
 import nltk
+import unicodedata
 
 from bs4 import BeautifulSoup
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
+
+
+def strip_accents(text):
+
+    try:
+        text = unicode(text, 'utf-8')
+    except NameError: # unicode is a default on python 3 
+        pass
+
+    text = (unicodedata.normalize('NFD', text)
+            .encode('ascii', 'ignore')
+            .decode("utf-8"))
+
+    return str(text)
 
 
 def fetch_recipe(url):
@@ -15,7 +30,7 @@ def fetch_recipe(url):
     recipe = (soup.find('section', class_='ar_recipe_index'))
 
     ingredients = fetch_ingredients(recipe)
-    directions = fetch_directions(recipe)
+    directions = parse_directions(scrape_directions(recipe))
 
     return name, ingredients, directions
 
@@ -34,31 +49,25 @@ def fetch_ingredients(recipe):
         item = []
         measure = False
         for j, part in enumerate(split_ing):
-            if j == 0:
+            if j == 0: # the first thing is always a number
                 ing_dict['quantity'] = str(eval(part[0]))
-            elif part[1] == 'CD' and not any(part[0] in v for v in ing_dict.values()):
+            elif part[1] == 'CD' and not any(part[0] in v for v in ing_dict.values()): # there might be a fractional quantity, get it if its not already used
                 ing_dict['quantity'] = str(float(ing_dict['quantity']) + eval(part[0]))
 
-            elif split_ing[j-1][1] == 'CD' and part[0] == '(':
+            elif split_ing[j-1][1] == 'CD' and part[0] == '(': # either look for paranthesis for measurements
                 m = re.search(r'\(.*\) [a-zA-Z]*', ingredients[i]).group()
                 if not ing_dict['measure']:
                     ing_dict['measure'] = m
                     measurements.add(m)
-            elif (split_ing[j-1][1] == 'CD' 
+            elif (split_ing[j-1][1] == 'CD' # or look for the thing directly following a number
                 and ((part[1] == 'NNS' and float(ing_dict['quantity']) > 1) 
                     or (part[1] == 'NN' and float(ing_dict['quantity']) <= 1))
                     or (part[1] == 'JJ' and part[0] in measurements and not ing_dict['measure'])):
                 if not ing_dict['measure']:
                     ing_dict['measure'] = part[0]
                     measurements.add(part[0])
-            # elif part[1] != 'JJ' and not ing_dict['measure']:
-            #     if part[1] == 'NNS' and float(ing_dict['quantity']) > 1:
-            #         ing_dict['measure'] = part[0]
-            #         measurements.add(part[0])
-            #     elif part[1] == 'NN':
-            #         ing_dict['measure'] = part[0]
-            #         measurements.add(part[0])
-            elif part[0] == ',':
+
+            elif part[0] == ',': # look for any prep after a comma
                 sub = split_ing[j+1:]
                 for k, sub_part in enumerate(sub):
                     if sub_part[1] in ['VBD', 'VBN']:
@@ -68,29 +77,23 @@ def fetch_ingredients(recipe):
                             ing_dict['prep'] += [sub_part[0]]
                 break
 
-        #     elif part[1] in ['VBD', 'VBN']:
-        #         desc = part[0]
-        #         pre = split_ing[j-1]
-        #         if pre[1] == 'RB':
-        #             desc = pre[0] + ' ' + desc
-        #         ing_dict['descriptor'] += [desc]
-            else:
+            else: # if it's still not used, it's probably the item
                 if not any(part[0] in v for v in ing_dict.values()) and len(part[0]) > 1:
                     item += [part[0]]
+
         if not ing_dict['measure']:
-            ing_dict['measure']
+            ing_dict['measure'] = ing_dict['item']
         if item:
             ing_dict['item'] = ' '.join(item)
         else:
             ing_dict['item'] = ing_dict['measure']
 
-
         ing_stats.append(ing_dict)
 
-    for i in range(len(temp_ing)):
-        print(temp_ing[i])
-        print(ing_stats[i])
-        print('\n')
+    # for i in range(len(temp_ing)):
+    #     print(temp_ing[i])
+    #     print(ing_stats[i])
+    #     print('\n')
     return ing_stats
 
 def parse_ingredient(ingredient):
@@ -100,7 +103,39 @@ def parse_ingredient(ingredient):
 
     return None
 
-def fetch_directions(recipe):
+def parse_directions(dirs):
+    tools = ["knife", "spoon", "bowl", 'muffin pan', 'cake pan', 'baking sheet', "pan", 
+            "pot", "whisk", "peeler", "cutting board", "can opener", "measuring cup", 
+            "measuring spoon", "plate", "colander", "masher", "grater", 'spatula',
+            'tongs', 'oven mitts', 'ladle', 'thermometer', 'blender', 'aluminum foil', 
+            'parchment paper', 'oven', 'dutch oven']
+
+    tool_synonym = {"skillet":"pan", "sauce pan":"pan", }
+
+    primary_methods = ['saute', 'simmer', 'boil', 'poach', 'bake', 'broil', 'grill', 'stew', 'braise', 'roast', 'sear', 
+                        'blanche', 'smoke', 'brine', 'barbecue', 'caramelize', 'fry', 'deep fry', 'stir fry', 'pan fry', 
+                        'fillet', 'sous-vide']
+
+    secondary_methods = ['chop', 'grate', 'stir', 'shake', 'mince', 'crush', 'squeeze', 'brown', 'baste', 'drain', 
+                        'cream', 'mix', 'dip', 'dry', 'frost', 'garnish', 'glaze', 'julienne', 'juice', 'press', 
+                        'microwave', 'marinate', 'pickle', 'puree', 'reduce', 'reduction', 'season', 'separate', 
+                        'beat', 'shuck', 'skim', 'stuff', 'melt', 'tenderize', 'thicken', 'whisk', 'combine',
+                        'cover', 'refridgerate', 'break']
+
+    print(dirs)
+    print('\n')
+
+    for direction in dirs:
+        sentences = sent_tokenize(direction.lower())
+        words = [word_tokenize(sent) for sent in sentences]
+        posd = [nltk.pos_tag(word) for word in words]
+        print(posd)
+
+
+    step_template = {ingredients:_, tools:_, methods:_, times:_}
+    return dirs
+
+def scrape_directions(recipe):
     dir_list = recipe.find('ol', class_='recipe-directions__list').find_all('li')
     return [d.span.text.strip() for d in dir_list]
 
@@ -113,8 +148,6 @@ def main():
         # https://www.allrecipes.com/recipe/268669/creamy-shrimp-scampi-with-half-and-half/
         # https://www.allrecipes.com/recipe/10477/chocolate-mint-cookies-i/
 
-
-        
         if recipe_url == 'q':
             return
         if 'allrecipes.com/recipe' not in recipe_url:
@@ -146,8 +179,72 @@ def main():
             elif n >= len(options):
                 print(f'\nInvalid selection: {n}\n')
             else:
-                # TODO actually do stuff
+                # TODO transformations
                 pass
+
+'''
+NOTES
+
+For Parsing into steps, maybe slice the og stuff out, transform separately, then splice it back in
+
+MAYBE JUST MAYBE
+Pull a bunch of recipes from allrecipes with the same genre as the desired transformation
+Then scrape the stuff from it
+
+--------------------------------------------------------------------------------------------
+
+*** To Vegetarian:
+Hardcode a list of common meats (chicken, beef, turkey?)
+Eliminate from recipe (easy)
+Substitute (tofu, vegetarian bacon, tofurkey) if possible
+
+Keep a search string, append dish name to it
+find similar dishes without meat
+Bit redundant
+
+--------------------------------------------------------------------------------------------
+
+*** From Vegetarian:
+Hardcode a list of common Substitute (tofu, vegetarian bacon, tofurkey) if possible
+Eliminate from recipe (easy)
+Substitute common meats (chicken, beef, turkey?)
+
+Recommend a meat?
+Maybe search all recipes for a similar recipe and find the meat with the most occurences
+
+--------------------------------------------------------------------------------------------
+
+*** To Healthy:
+Do the same stuff, keep a map of unhealthy stuff to healthy stuff
+
+--------------------------------------------------------------------------------------------
+
+*** From Healthy:
+Add a bunch of butter
+
+--------------------------------------------------------------------------------------------
+
+*** Scaling (double and cut in half):
+Just multiply/divide the quantities
+
+--------------------------------------------------------------------------------------------
+
+*** To/From Japanese:
+mochi stuff
+
+--------------------------------------------------------------------------------------------
+
+*** To/From {OTHER CUISINE}
+
+--------------------------------------------------------------------------------------------
+
+?? *** List Calorie Count Assoc. With Meal
+
+--------------------------------------------------------------------------------------------
+
+?? *** 
+
+'''
 
 if __name__ == "__main__":
     main()
