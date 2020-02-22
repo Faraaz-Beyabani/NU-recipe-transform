@@ -30,7 +30,7 @@ def fetch_recipe(url):
     recipe = (soup.find('section', class_='ar_recipe_index'))
 
     ingredients = fetch_ingredients(recipe)
-    directions = parse_directions(scrape_directions(recipe))
+    directions = parse_directions(scrape_directions(recipe), ingredients)
 
     return name, ingredients, directions
 
@@ -103,7 +103,7 @@ def parse_ingredient(ingredient):
 
     return None
 
-def parse_directions(dirs):
+def parse_directions(directions, ingredient_stats):
     tools = ["knife", "spoon", "bowl", 'muffin pan', 'cake pan', 'baking sheet', "pan", 
             "pot", "whisk", "peeler", "cutting board", "can opener", "measuring cup", 
             "measuring spoon", "plate", "colander", "masher", "grater", 'spatula',
@@ -122,16 +122,38 @@ def parse_directions(dirs):
                         'beat', 'shuck', 'skim', 'stuff', 'melt', 'tenderize', 'thicken', 'whisk', 'combine',
                         'cover', 'refridgerate', 'break']
 
-    print(dirs)
-    print('\n')
+    split_steps = []
+    print(ingredient_stats)
+    ingredients = [i['item'] for i in ingredient_stats]
 
-    for direction in dirs:
-        sentences = sent_tokenize(direction.lower())
-        words = [word_tokenize(sent) for sent in sentences]
-        posd = [nltk.pos_tag(word) for word in words]
-        print(posd)
+    for direction in directions:
+        step_stats = {'string':'', 'tools':[], 'methods':[], 'ingredients':[], 'times':[]}
+        split_step = direction.lower().split()
 
-    return dirs
+        for i in range(len(split_step)):
+            word = split_step[i]
+
+            if word in tools:
+                step_stats['tools'].append(word)
+                split_step[i] = '{tool}'
+
+            elif word in primary_methods or word in secondary_methods:
+                step_stats['methods'].append(word)
+                split_step[i] = '{method}'
+
+            elif word in ingredients:
+                step_stats['ingredients'].append(word)
+                split_step[i] = '{ingredient}'
+
+            elif word.isdigit() and split_step[i+1] in ['hours', 'minutes', 'seconds']:
+                step_stats['times'].append(word)
+
+        step_stats['string'] = ' '.join(split_step)
+        split_steps.append(step_stats)
+
+    print(split_steps)
+
+    return split_steps
 
 def scrape_directions(recipe):
     dir_list = recipe.find('ol', class_='recipe-directions__list').find_all('li')
@@ -154,7 +176,7 @@ def main():
         name, ingredients, directions = fetch_recipe(recipe_url)
         fresh = True
 
-        openers = ['Wow!', 'Oh,', 'Huh,']
+        openers = ['Wow!', 'Oh,', 'Huh,', 'Mmm,']
         closers = ['Sounds tasty!', 'Smells delicious.', 'Looks great!']
         options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it non-vegetarian', 
                     'Make it healthier', 'Make it unhealthier', 'Make it CUISINE TYPE', 'Make it CUISINE TYPE', 
@@ -162,7 +184,7 @@ def main():
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
 
-        # return
+        return #TODO REMOVE THIS RETURN
 
         while True:
             for i,o in enumerate(options):
