@@ -40,11 +40,11 @@ def fetch_ingredients(recipe):
     ingredients = []
     for sub_list in ing_lists:
         ingredients += [i for i in [parse_ingredient(i) for i in sub_list] if i]
-    temp_ing = [nltk.pos_tag(word_tokenize(i)) for i in ingredients]
+    pos_ings = [nltk.pos_tag(word_tokenize(i)) for i in ingredients]
 
     measurements = set()
     ing_stats = []
-    for i, split_ing in enumerate(temp_ing):
+    for i, split_ing in enumerate(pos_ings):
         ing_dict = {'quantity':0, 'measure':'', 'item':'', 'prep':[], 'descriptor':[]}
         item = []
         measure = False
@@ -75,25 +75,30 @@ def fetch_ingredients(recipe):
                             ing_dict['prep'] += [sub[k-1][0] + ' ' + sub_part[0]]
                         else:
                             ing_dict['prep'] += [sub_part[0]]
+                if sub[0][0] == 'or':
+                    ing_dict['prep'] += [i[0] for i in sub]
                 break
 
-            else: # if it's still not used, it's probably the item
-                if not any(part[0] in v for v in ing_dict.values()) and len(part[0]) > 1:
-                    item += [part[0]]
+            elif part[1] == 'JJ': # look for descriptors
+                ing_dict['descriptor'] += [part[0]]
 
-        if not ing_dict['measure']:
-            ing_dict['measure'] = ing_dict['item']
+        for part in split_ing: # get every unused thing and use it as the item
+            if not any(part[0] in v for v in ing_dict.values()) and len(part[0]) > 1:
+                item += [part[0]]
+
         if item:
             ing_dict['item'] = ' '.join(item)
         else:
             ing_dict['item'] = ing_dict['measure']
+        if not ing_dict['measure']:
+            ing_dict['measure'] = ing_dict['item']
 
         ing_stats.append(ing_dict)
 
-    # for i in range(len(temp_ing)):
-    #     print(temp_ing[i])
-    #     print(ing_stats[i])
-    #     print('\n')
+    for i in range(len(pos_ings)):
+        print(pos_ings[i])
+        print(ing_stats[i])
+        print('\n')
     return ing_stats
 
 def parse_ingredient(ingredient):
@@ -123,7 +128,6 @@ def parse_directions(directions, ingredient_stats):
                         'cover', 'refridgerate', 'break']
 
     split_steps = []
-    print(ingredient_stats)
     ingredients = [i['item'] for i in ingredient_stats]
 
     for direction in directions:
@@ -131,7 +135,7 @@ def parse_directions(directions, ingredient_stats):
         split_step = direction.lower().split()
 
         for i in range(len(split_step)):
-            word = split_step[i]
+            word = re.sub(r'\W+', '', split_step[i])
 
             if word in tools:
                 step_stats['tools'].append(word)
@@ -141,17 +145,19 @@ def parse_directions(directions, ingredient_stats):
                 step_stats['methods'].append(word)
                 split_step[i] = '{method}'
 
-            elif any(word in i.split() for i in ingredients):
+            elif any(any(word == part for part in ingredient.split()) for ingredient in ingredients):
                 step_stats['ingredients'].append(word)
                 split_step[i] = '{ingredient}'
 
-            elif word.isdigit() and split_step[i+1] in ['hours', 'minutes', 'seconds']:
+            elif word.isdigit() and re.sub(r'\W+', '', split_step[i+1]) in ['hours', 'hour', 'minutes', 'minute', 'seconds']:
                 step_stats['times'].append(word)
+                split_step[i] = '{time}'
 
         step_stats['string'] = ' '.join(split_step)
         split_steps.append(step_stats)
 
-    print(split_steps)
+    for x in split_steps:
+        print(x)
 
     return split_steps
 
