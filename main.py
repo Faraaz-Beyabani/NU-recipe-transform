@@ -1,6 +1,8 @@
 import re
 import random
 import requests
+from fractions import Fraction 
+
 import nltk
 import unicodedata
 
@@ -52,7 +54,7 @@ def parse_ingredients(recipe):
             if j == 0 and part[1] == 'CD': # the first thing is always a number
                 ing_dict['quantity'] = str(eval(part[0]))
                 string[j] = '{quantity}'
-            elif part[1] == 'CD' and not any(part[0] in v for v in ing_dict.values()): # there might be a fractional quantity, get it if its not already used
+            elif j == 1 and part[1] == 'CD' and not any(part[0] in v for v in ing_dict.values()): # there might be a fractional quantity, get it if its not already used
                 ing_dict['quantity'] = str(float(ing_dict['quantity']) + eval(part[0]))
                 string[j] = '{quantity}'
 
@@ -97,10 +99,10 @@ def parse_ingredients(recipe):
 
         ing_stats.append(ing_dict)
 
-    for i in range(len(pos_ings)):
-        print(pos_ings[i])
-        print(ing_stats[i])
-        print('\n')
+    # for i in range(len(pos_ings)):
+    #     print(pos_ings[i])
+    #     print(ing_stats[i])
+    #     print('\n')
     return ing_stats
 
 def scrape_ingredient(ingredient):
@@ -182,8 +184,8 @@ def parse_directions(directions, ingredient_stats):
         step_stats['string'] = ' '.join(split_step)
         split_steps.append(step_stats)
 
-    for x in split_steps:
-        print(x)
+    # for x in split_steps:
+    #     print(x)
 
     return split_steps
 
@@ -203,23 +205,63 @@ def reconstruct_directions(directions):
     ingredients = 0
     times = 0
 
-# def double_it():
+def double_it(ingredients, directions):
+    t_ingredients = ingredients
+    t_directions = directions
+    for i in range(len(ingredients)):
+        try:
+            old_num = float(t_ingredients[i]['quantity'])
+            t_ingredients[i]['quantity'] = str(float(t_ingredients[i]['quantity']) * 2)
+            if 0.5 < old_num and old_num <= 1:
+                temp = 'measure'
+                if not t_ingredients[i][temp]:
+                    temp = 'item'
+                if t_ingredients[i][temp][-2:] in ['ch', 'sh'] or t_ingredients[i][temp][-1] in ['s', 'x', 'z']:
+                    t_ingredients[i][temp] += 'es'
+                elif 'shrimp' not in t_ingredients[i][temp]:
+                    t_ingredients[i][temp] += 's'
+        except ValueError:
+            pass
+
+    print(t_ingredients)
+
+def half_it(ingredients, directions):
+    t_ingredients = ingredients
+    t_directions = directions
+    for i in range(len(ingredients)):
+        try:
+            old_num = float(t_ingredients[i]['quantity'])
+            t_ingredients[i]['quantity'] = str(float(t_ingredients[i]['quantity']) / 2)
+            if 2 >= old_num and old_num > 1:
+                temp = 'measure'
+                if not t_ingredients[i][temp]:
+                    temp = 'item'
+                if t_ingredients[i][temp][-4:] in ['ches', 'shes'] or t_ingredients[i][temp][-3:] in ['ses', 'xes', 'zes']:
+                    t_ingredients[i][temp] = t_ingredients[i][temp][:-2]
+                elif t_ingredients[i][temp][-1] == 's':
+                    t_ingredients[i][temp] = t_ingredients[i][temp][:-1]
+        except ValueError:
+            pass
+
+    print(t_ingredients)
+
 
 def main():
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
-        # https://www.allrecipes.com/recipe/213268/classic-goulash/
-        # https://www.allrecipes.com/recipe/16212/chocolate-mint-candies-cookies/
-        # https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/
-        # https://www.allrecipes.com/recipe/268669/creamy-shrimp-scampi-with-half-and-half/
-        # https://www.allrecipes.com/recipe/10477/chocolate-mint-cookies-i/
-        # https://www.allrecipes.com/recipe/82439/pork-and-pepper-stir-fry/
-        # https://www.allrecipes.com/recipe/257914/taro-boba-tea/
+        # recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
+        recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/88921/shrimp-wellington/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/268669/creamy-shrimp-scampi-with-half-and-half/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/257914/taro-boba-tea/'
         # recipe_url = 'https://www.allrecipes.com/recipe/193307/easy-mochi/'
         # recipe_url = 'https://www.allrecipes.com/recipe/266015/boba-coconut-milk-black-tea-with-tapioca-pearls/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/257914/taro-boba-tea/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/23600/worlds-best-lasagna/?internalSource=streams&referringContentType=Recipe%20Hub&clickId=st_recipes_mades'
-        recipe_url = 'https://www.allrecipes.com/recipe/212892/alligator-animal-italian-bread/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/212892/alligator-animal-italian-bread/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/232908/chef-johns-meatless-meatballs/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/10477/chocolate-mint-cookies-i/'          # BUG: NEW STYLE
+        # recipe_url = 'https://www.allrecipes.com/recipe/82439/pork-and-pepper-stir-fry/'          # BUG: NEW STYLE
+        # recipe_url = 'https://www.allrecipes.com/recipe/23600/worlds-best-lasagna/'               # BUG: NEW STYLE
+        # recipe_url = 'https://www.allrecipes.com/recipe/16212/chocolate-mint-candies-cookies/'    # BUG: NEW STYLE
 
         if recipe_url == 'q':
             return
@@ -231,15 +273,15 @@ def main():
         directions = o_directions
         fresh = True
 
+        print(ingredients)
+
         openers = ['Wow!', 'Oh,', 'Huh,', 'Mmm,']
         closers = ['Sounds tasty!', 'Smells delicious.', 'Looks great!']
-        options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it non-vegetarian', 
-                    'Make it healthier', 'Make it unhealthier', 'Make it Japanese style', 'Make it CUISINE TYPE', 
-                    'Double it', 'Halve the amount']
+        options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it nonvegetarian', 
+                    'Make it healthier', 'Make it unhealthier', 'Make it Japanese', 'Make it CUISINE TYPE', 
+                    'Double it', 'Half it']
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
-
-        return #TODO REMOVE THIS RETURN
 
         while True:
             for i,o in enumerate(options):
@@ -254,7 +296,7 @@ def main():
             elif n >= len(options):
                 print(f'\nInvalid selection: {n}\n')
             else:
-                # TODO transformations
+                eval(options[n].lower().replace(' ', '_')+'(ingredients, directions)')
                 pass
 
 '''
