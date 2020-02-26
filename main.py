@@ -59,7 +59,7 @@ def parse_ingredients(recipe):
                 string[j] = '{quantity}'
 
             elif split_ing[j-1][1] == 'CD' and part[0] == '(': # either look for paranthesis for measurements
-                m = re.search(r'\(.*\) [a-zA-Z]*', ingredients[i]).group()
+                m = re.search(r'\(.*?\) [a-zA-Z]*', ingredients[i]).group()
                 if not ing_dict['measure']:
                     ing_dict['measure'] = m
                     measurements.add(m)
@@ -218,6 +218,8 @@ def double_it(ingredients, directions):
                     temp = 'item'
                 if t_ingredients[i][temp][-2:] in ['ch', 'sh'] or t_ingredients[i][temp][-1] in ['s', 'x', 'z']:
                     t_ingredients[i][temp] += 'es'
+                elif 'loaf' in t_ingredients[i][temp]:
+                    t_ingredients[i][temp] = t_ingredients[i][temp].replace('loaf', 'loaves')
                 elif 'shrimp' not in t_ingredients[i][temp]:
                     t_ingredients[i][temp] += 's'
         except ValueError:
@@ -238,6 +240,8 @@ def half_it(ingredients, directions):
                     temp = 'item'
                 if t_ingredients[i][temp][-4:] in ['ches', 'shes'] or t_ingredients[i][temp][-3:] in ['ses', 'xes', 'zes']:
                     t_ingredients[i][temp] = t_ingredients[i][temp][:-2]
+                elif 'loaves' in t_ingredients[i][temp]:
+                    t_ingredients[i][temp] = t_ingredients[i][temp].replace('loaves', 'loaf')
                 elif t_ingredients[i][temp][-1] == 's':
                     t_ingredients[i][temp] = t_ingredients[i][temp][:-1]
         except ValueError:
@@ -250,7 +254,8 @@ def main():
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
         # recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
-        recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
+        recipe_url = 'https://www.allrecipes.com/recipe/230117/gluten-free-thanksgiving-stuffing/'
         # recipe_url = 'https://www.allrecipes.com/recipe/88921/shrimp-wellington/'
         # recipe_url = 'https://www.allrecipes.com/recipe/268669/creamy-shrimp-scampi-with-half-and-half/'
         # recipe_url = 'https://www.allrecipes.com/recipe/257914/taro-boba-tea/'
