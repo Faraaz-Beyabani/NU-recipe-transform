@@ -8,7 +8,7 @@ import unicodedata
 
 from bs4 import BeautifulSoup
 from nltk.tokenize import word_tokenize, sent_tokenize
-
+import numpy as np
 
 def strip_accents(text):
 
@@ -126,6 +126,10 @@ def parse_directions(directions, ingredient_stats):
 
     tools = sorted(tools, key=lambda x: len(x.split()), reverse=True)
 
+    # s = [sent_tokenize(i) for i in directions]
+    # w = [nltk.ne_chunk(nltk.pos_tag(word_tokenize(i))) for i in directions]
+    # print(w)
+
     primary_methods = ['saute', 'simmer', 'boil', 'poach', 'bake', 'broil', 'grill', 'stew', 'braise', 'roast', 'sear', 
                         'blanche', 'smoke', 'brine', 'barbecue', 'caramelize', 'fry', 'deep fry', 'stir fry', 'pan fry', 
                         'fillet', 'sous-vide']
@@ -216,7 +220,7 @@ def double_it(ingredients, directions):
                 temp = 'measure'
                 if not t_ingredients[i][temp]:
                     temp = 'item'
-                if t_ingredients[i][temp][-2:] in ['ch', 'sh'] or t_ingredients[i][temp][-1] in ['s', 'x', 'z']:
+                if t_ingredients[i][temp][-2:] in ['ch', 'sh'] or t_ingredients[i][temp][-1] in ['s', 'x', 'z', 'o']:
                     t_ingredients[i][temp] += 'es'
                 elif 'loaf' in t_ingredients[i][temp]:
                     t_ingredients[i][temp] = t_ingredients[i][temp].replace('loaf', 'loaves')
@@ -226,6 +230,7 @@ def double_it(ingredients, directions):
             pass
 
     print(t_ingredients)
+    return t_ingredients, t_directions
 
 def half_it(ingredients, directions):
     t_ingredients = ingredients
@@ -238,7 +243,7 @@ def half_it(ingredients, directions):
                 temp = 'measure'
                 if not t_ingredients[i][temp]:
                     temp = 'item'
-                if t_ingredients[i][temp][-4:] in ['ches', 'shes'] or t_ingredients[i][temp][-3:] in ['ses', 'xes', 'zes']:
+                if t_ingredients[i][temp][-4:] in ['ches', 'shes'] or t_ingredients[i][temp][-3:] in ['xes', 'zes', 'oes']:
                     t_ingredients[i][temp] = t_ingredients[i][temp][:-2]
                 elif 'loaves' in t_ingredients[i][temp]:
                     t_ingredients[i][temp] = t_ingredients[i][temp].replace('loaves', 'loaf')
@@ -248,19 +253,37 @@ def half_it(ingredients, directions):
             pass
 
     print(t_ingredients)
+    return t_ingredients, t_directions
 
+def make_it_vegetarian(ingredients, directions):
+    t_ingredients = ingredients
+    t_items = [i['item'] for i in t_ingredients]
+    t_directions = directions
+    meats = ['beef', 'chicken', 'turkey', 'fish', 'meat', 'tuna', 'shrimp', 'pork', 'bacon', 'ham', 'salmon', 'lamb', 
+            'duck', 'sausage', 'veal', 'rabbit', 'anchovy', 'bison', 'salami', 'pepperoni', 'crab', 'lobster', 'squid', 
+            'octopus', 'tilapia', 'cod', 'scallop', 'clam', 'mussel', 'halibut', 'bass', 'sardine', 'fillet', 'filet', 
+            'rib', 'sirloin', 'heart', 'brain', 'breast', 'leg', 'wing', 'steak', 'brisket', 'shank', 'flank', 'tenderloin', 
+            'round', 'ribeye', 'mignon', 'skirt', 't-bone', 'belly', 'shoulder', 'head', 'blade', 'spare rib', 'thigh', 
+            'liver', 'giblets', 'drumstick', 'pollock', 'flounder', 'trout', 'cuddlefish', 'crawfish', 'crayfish', 'rockfish',
+            'bream', 'walleye', 'lightfish', 'char', 'carp', 'sturgeon', 'yellowtail', 'snapper', 'herring', 'perch', 'sea urchin', 
+            'eel', 'wagyu', 'sokeye', 'sardine', 'mackerel', 'shad', 'goose', 'loin']
+    w = [nltk.ne_chunk(nltk.pos_tag(word_tokenize(i))) for i in t_items]
+    print(w)
+
+    return t_ingredients, t_directions
 
 def main():
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
         # recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
         # recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
-        recipe_url = 'https://www.allrecipes.com/recipe/230117/gluten-free-thanksgiving-stuffing/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/230117/gluten-free-thanksgiving-stuffing/'
         # recipe_url = 'https://www.allrecipes.com/recipe/88921/shrimp-wellington/'
         # recipe_url = 'https://www.allrecipes.com/recipe/268669/creamy-shrimp-scampi-with-half-and-half/'
         # recipe_url = 'https://www.allrecipes.com/recipe/257914/taro-boba-tea/'
         # recipe_url = 'https://www.allrecipes.com/recipe/193307/easy-mochi/'
         # recipe_url = 'https://www.allrecipes.com/recipe/266015/boba-coconut-milk-black-tea-with-tapioca-pearls/'
+        recipe_url = 'https://www.allrecipes.com/recipe/222340/chef-johns-roast-christmas-goose/'
         # recipe_url = 'https://www.allrecipes.com/recipe/212892/alligator-animal-italian-bread/'
         # recipe_url = 'https://www.allrecipes.com/recipe/232908/chef-johns-meatless-meatballs/'
         # recipe_url = 'https://www.allrecipes.com/recipe/10477/chocolate-mint-cookies-i/'          # BUG: NEW STYLE
@@ -278,12 +301,10 @@ def main():
         directions = o_directions
         fresh = True
 
-        print(ingredients)
-
         openers = ['Wow!', 'Oh,', 'Huh,', 'Mmm,']
         closers = ['Sounds tasty!', 'Smells delicious.', 'Looks great!']
-        options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it nonvegetarian', 
-                    'Make it healthier', 'Make it unhealthier', 'Make it Japanese', 'Make it CUISINE TYPE', 
+        options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it nonvegetarian',
+                    'Make it healthier', 'Make it unhealthier', 'Make it Japanese', 'Make it Pan Asian',
                     'Double it', 'Half it']
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
@@ -301,7 +322,7 @@ def main():
             elif n >= len(options):
                 print(f'\nInvalid selection: {n}\n')
             else:
-                eval(options[n].lower().replace(' ', '_')+'(ingredients, directions)')
+                ingredients, directions = eval(options[n].lower().replace(' ', '_')+'(ingredients, directions)')
                 pass
 
 '''
