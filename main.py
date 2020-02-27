@@ -259,16 +259,28 @@ def make_it_vegetarian(ingredients, directions):
     t_ingredients = ingredients
     t_items = [i['item'] for i in t_ingredients]
     t_directions = directions
-    meats = ['beef', 'chicken', 'turkey', 'fish', 'meat', 'tuna', 'shrimp', 'pork', 'bacon', 'ham', 'salmon', 'lamb', 
-            'duck', 'sausage', 'veal', 'rabbit', 'anchovy', 'bison', 'salami', 'pepperoni', 'crab', 'lobster', 'squid', 
-            'octopus', 'tilapia', 'cod', 'scallop', 'clam', 'mussel', 'halibut', 'bass', 'sardine', 'fillet', 'filet', 
-            'rib', 'sirloin', 'heart', 'brain', 'breast', 'leg', 'wing', 'steak', 'brisket', 'shank', 'flank', 'tenderloin', 
-            'round', 'ribeye', 'mignon', 'skirt', 't-bone', 'belly', 'shoulder', 'head', 'blade', 'spare rib', 'thigh', 
-            'liver', 'giblets', 'drumstick', 'pollock', 'flounder', 'trout', 'cuddlefish', 'crawfish', 'crayfish', 'rockfish',
-            'bream', 'walleye', 'lightfish', 'char', 'carp', 'sturgeon', 'yellowtail', 'snapper', 'herring', 'perch', 'sea urchin', 
-            'eel', 'wagyu', 'sokeye', 'sardine', 'mackerel', 'shad', 'goose', 'loin']
-    w = [nltk.ne_chunk(nltk.pos_tag(word_tokenize(i))) for i in t_items]
-    print(w)
+    meats = ['beef', 'pork', ' ham',  'lamb', 'sausage', 'veal',  'bison', 
+             'fillet', 'filet', 'rib', 'sirloin', 'heart', 'brain', 'breast', 
+             'steak', 'brisket', 'shank', 'flank', 'tenderloin', 'ribeye', 'mignon', 'skirt', 't-bone', 'belly', 
+             'shoulder', 'head', 'spare rib', 'thigh', 'liver', 'giblets',  'wagyu', 'loin', 'spam']
+
+    birds = ['chicken', 'turkey', 'duck', 'goose', 'drumstick', 'wing', 'rabbit', 'frog', 'leg'] # replace with tofurky
+
+    tempeh = ['salami', 'pepperoni']
+
+    fish = ['sockeye', 'sardine', 'mackerel', 'shad', ' eel','pollock', 'flounder', 'trout',  'crawfish', 'crayfish', 'rockfish',
+            'bream', 'walleye', 'lightfish', 'carp', 'sturgeon', 'yellowtail', 'snapper', 'herring', 'perch', 'tilapia', 'tuna',
+            'fish','salmon','anchovy', ' cod',  'halibut', 'bass', 'sardine'] # replace with tofu
+
+    etc_fish = ['squid', 'octopus', 'cuddlefish', 'oyster', 'scallop', 'clam', 'mussel', 'shrimp'] # replace with king oyster mushrooms
+
+    trans_meat = {'bacon':'tempeh bacon', 'lobster':'lobster mushrooms', 'crab':'lobster mushrooms'} # 1:1 replacements
+
+
+    print(t_ingredients)
+    print(t_directions)
+    if ingredient in any(meats):
+        ingredient = 'lab-grown ' + ingredient
 
     return t_ingredients, t_directions
 
