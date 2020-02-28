@@ -392,6 +392,7 @@ def main():
         options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it nonvegetarian',
                     'Make it healthier', 'Make it unhealthier', 'Make it Japanese', 'Make it Pan Asian',
                     'Double it', 'Half it']
+        history = []
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
 
@@ -413,6 +414,9 @@ def main():
 
 '''
 NOTES
+
+MAYBE JUST MAYBE
+We can keep a history of all transformations, and if two opposite transformations happen, remove them from the history and rerun all trans on the og ingredients and steps
 
 For Parsing into steps, maybe slice the og stuff out, transform separately, then splice it back in
 
