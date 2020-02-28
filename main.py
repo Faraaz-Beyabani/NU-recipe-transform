@@ -59,7 +59,24 @@ def parse_ingredients(recipe):
                 string[j] = '{quantity}'
 
             elif split_ing[j-1][1] == 'CD' and part[0] == '(': # either look for paranthesis for measurements
-                m = re.search(r'\(.*?\) [a-zA-Z]*', ingredients[i]).group()
+                m = re.search(r'\(.*?\)', ingredients[i])
+                if m:
+                    m = m.group()
+                else:
+                    continue
+                if ing_dict['quantity']:
+                    word = None
+                    for k in range(j, len(split_ing)):
+                            if split_ing[k-1][0] == ')':
+                                word = split_ing[k]
+                                break
+                    if int(ing_dict['quantity']) > 1 and word[1] == 'NNS' and word[0] in ['cans', 'packages']:
+                        ing_dict['measure'] = m + ' ' + word[0]
+                    elif int(ing_dict['quantity']) <= 1 and word[1] == 'NN' and word[0] in ['can', 'package']:
+                        ing_dict['measure'] = m + ' ' + word[0]
+                    else:
+                        ing_dict['measure'] = m
+
                 if not ing_dict['measure']:
                     ing_dict['measure'] = m
                     measurements.add(m)
@@ -99,10 +116,6 @@ def parse_ingredients(recipe):
 
         ing_stats.append(ing_dict)
 
-    # for i in range(len(pos_ings)):
-    #     print(pos_ings[i])
-    #     print(ing_stats[i])
-    #     print('\n')
     return ing_stats
 
 def scrape_ingredient(ingredient):
@@ -125,10 +138,6 @@ def parse_directions(directions, ingredient_stats):
             'parchment paper', 'oven', 'dutch oven', 'skillet', 'sauce pan']
 
     tools = sorted(tools, key=lambda x: len(x.split()), reverse=True)
-
-    # s = [sent_tokenize(i) for i in directions]
-    # w = [nltk.ne_chunk(nltk.pos_tag(word_tokenize(i))) for i in directions]
-    # print(w)
 
     primary_methods = ['saute', 'simmer', 'boil', 'poach', 'bake', 'broil', 'grill', 'stew', 'braise', 'roast', 'sear', 
                         'blanche', 'smoke', 'brine', 'barbecue', 'caramelize', 'fry', 'deep fry', 'stir fry', 'pan fry', 
@@ -172,6 +181,7 @@ def parse_directions(directions, ingredient_stats):
                                 step_stats['tools'] += [t]
                         else:
                             split_step[i] = '{tool}'
+                            step_stats['tools'] += [t]
 
             elif any(f' {word} ' in f' {m} ' for m in primary_methods) or any(f' {word} ' in f' {m} ' for m in secondary_methods):
                 step_stats['methods'].append(word)
@@ -179,7 +189,7 @@ def parse_directions(directions, ingredient_stats):
 
             elif any(any(word == part for part in ingredient.lower().split()) for ingredient in ingredients):
                 step_stats['ingredients'].append(word)
-                split_step[i] = '{ingredient}'+end
+                # split_step[i] = '{ingredient}'+end
 
             elif word.isdigit() and re.sub(r'\W+', '', split_step[i+1]) in ['hours', 'hour', 'minutes', 'minute', 'seconds']:
                 step_stats['times'].append(word)
@@ -187,9 +197,6 @@ def parse_directions(directions, ingredient_stats):
 
         step_stats['string'] = ' '.join(split_step)
         split_steps.append(step_stats)
-
-    # for x in split_steps:
-    #     print(x)
 
     return split_steps
 
@@ -220,6 +227,10 @@ def double_it(ingredients, directions):
                 temp = 'measure'
                 if not t_ingredients[i][temp]:
                     temp = 'item'
+
+                if t_ingredients[i][temp][-1] == ')':
+                    continue
+
                 if t_ingredients[i][temp][-2:] in ['ch', 'sh'] or t_ingredients[i][temp][-1] in ['s', 'x', 'z', 'o']:
                     t_ingredients[i][temp] += 'es'
                 elif 'loaf' in t_ingredients[i][temp]:
@@ -257,16 +268,22 @@ def half_it(ingredients, directions):
 
 def make_it_vegetarian(ingredients, directions):
     t_ingredients = ingredients
-    t_items = [i['item'] for i in t_ingredients]
     t_directions = directions
-    meats = ['beef', 'pork', ' ham',  'lamb', 'sausage', 'veal',  'bison', 
-             'fillet', 'filet', 'rib', 'sirloin', 'heart', 'brain', 'breast', 
-             'steak', 'brisket', 'shank', 'flank', 'tenderloin', 'ribeye', 'mignon', 'skirt', 't-bone', 'belly', 
-             'shoulder', 'head', 'spare rib', 'thigh', 'liver', 'giblets',  'wagyu', 'loin', 'spam']
+    ''' Steps:
+        1: Transform ingredients with lists
+        2: Store pairs in dict
+        3: Transform steps with new dict and word pairs in dict
+        4: ???
+        5: Profit
+    '''
+    meats = ['beef', 'pork',  'lamb',  'veal',  'bison', 'turkey', 'chicken'] 
 
-    birds = ['chicken', 'turkey', 'duck', 'goose', 'drumstick', 'wing', 'rabbit', 'frog', 'leg'] # replace with tofurky
+    # cuts = ['filet', 'rib', 'sirloin', 'brisket', 'shank', 'flank', 'chuck', 'boneless', 'bone-in',
+    #         'tenderloin', 'ribeye', 'skirt', 't-bone', 'belly', 'shoulder', 'head', 'spare rib', 'loin']
 
-    tempeh = ['salami', 'pepperoni']
+    birds = ['chicken', 'turkey', 'duck', 'goose', 'drumstick', 'wing', 'thigh', 'rabbit', 'frog', 'breast'] # replace with tofurky
+
+    tempeh = ['salami', 'pepperoni', 'sausage', 'spam', 'liver', ' ham', 'bacon']
 
     fish = ['sockeye', 'sardine', 'mackerel', 'shad', ' eel','pollock', 'flounder', 'trout',  'crawfish', 'crayfish', 'rockfish',
             'bream', 'walleye', 'lightfish', 'carp', 'sturgeon', 'yellowtail', 'snapper', 'herring', 'perch', 'tilapia', 'tuna',
@@ -274,13 +291,70 @@ def make_it_vegetarian(ingredients, directions):
 
     etc_fish = ['squid', 'octopus', 'cuddlefish', 'oyster', 'scallop', 'clam', 'mussel', 'shrimp'] # replace with king oyster mushrooms
 
-    trans_meat = {'bacon':'tempeh bacon', 'lobster':'lobster mushrooms', 'crab':'lobster mushrooms'} # 1:1 replacements
+    misc_sea = ['lobster', 'crab'] # replace with lobster mushrooms
 
+    replacement = {}
+    v = ['tempeh', 'mushrooms', 'mushroom', 'tofu', 'tofurky']
+
+    for ing in t_ingredients:
+        temp = ing['item']
+
+        if 'steak' in ing['item']:
+            ing['item'] = 'cauliflower steak'
+        elif 'ground' in ing['item'] and any(m in ing['item'] for m in meats):
+            ing['item'] = 'impossible ground beef'
+        elif any(b in ing['item'] for b in birds):
+            ing['item'] = 'tofurky'
+        elif any(f in ing['item'] for f in fish):
+            ing['item'] = 'tofu'
+        elif any(e in ing['item'] for e in etc_fish):
+            ing['item'] = 'king oyster mushrooms'
+        elif any(t in ing['item'] for t in tempeh):
+            ing['item'] = 'tempeh'
+        elif any(s in ing['item'] for s in misc_sea):
+            ing['item'] = 'lobster mushrooms'
+        elif any(m in ing['item'] for m in meats):
+            ing['item'] = 'tofu'
+        else:
+            continue
+
+        ing['prep'] = []
+        replacement[temp] = ing['item']
+        if ing['measure'][-1] == ')':
+            ing['measure'] += (' packages' if float(ing['quantity']) > 1 else ' package')
+
+    w = (' '.join(replacement.keys())).split()
+
+    for step in t_directions:
+        sentence = step['string'].split()
+        for i in range(len(sentence)):
+
+            if i > 0 and sentence[i] in w and sentence[i-1] in v:
+                sentence[i] = ''
+
+            if sentence[i] == 'meat' or sentence[i] == 'fish':
+                sentence[i] = list(replacement.values())[0]
+
+            if any(b in sentence[i] for b in birds):
+                sentence[i] = 'tofurky'
+            elif any(f in sentence[i] for f in fish):
+                sentence[i] = 'tofu'
+            elif any(e in sentence[i] for e in etc_fish):
+                sentence[i] = 'king oyster mushrooms'
+            elif any(t in sentence[i] for t in tempeh):
+                sentence[i] = 'tempeh'
+            elif any(s in sentence[i] for s in misc_sea):
+                sentence[i] = 'lobster mushrooms'
+            elif any(m in sentence[i] for m in meats):
+                sentence[i] = 'tofu'
+            else:
+                continue
+
+        step['string'] = (' '.join(sentence)).replace('  ', ' ')
 
     print(t_ingredients)
+    print()
     print(t_directions)
-    if ingredient in any(meats):
-        ingredient = 'lab-grown ' + ingredient
 
     return t_ingredients, t_directions
 
@@ -295,13 +369,13 @@ def main():
         # recipe_url = 'https://www.allrecipes.com/recipe/257914/taro-boba-tea/'
         # recipe_url = 'https://www.allrecipes.com/recipe/193307/easy-mochi/'
         # recipe_url = 'https://www.allrecipes.com/recipe/266015/boba-coconut-milk-black-tea-with-tapioca-pearls/'
-        recipe_url = 'https://www.allrecipes.com/recipe/222340/chef-johns-roast-christmas-goose/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/222340/chef-johns-roast-christmas-goose/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/109297/cedar-planked-salmon/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/132814/easy-yet-romantic-filet-mignon/'
         # recipe_url = 'https://www.allrecipes.com/recipe/212892/alligator-animal-italian-bread/'
         # recipe_url = 'https://www.allrecipes.com/recipe/232908/chef-johns-meatless-meatballs/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/10477/chocolate-mint-cookies-i/'          # BUG: NEW STYLE
-        # recipe_url = 'https://www.allrecipes.com/recipe/82439/pork-and-pepper-stir-fry/'          # BUG: NEW STYLE
-        # recipe_url = 'https://www.allrecipes.com/recipe/23600/worlds-best-lasagna/'               # BUG: NEW STYLE
-        # recipe_url = 'https://www.allrecipes.com/recipe/16212/chocolate-mint-candies-cookies/'    # BUG: NEW STYLE
+        recipe_url = 'https://www.allrecipes.com/recipe/235901/peppercorn-roast-beef/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/255545/ground-turkey-taco-meat/'
 
         if recipe_url == 'q':
             return
