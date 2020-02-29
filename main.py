@@ -1,6 +1,7 @@
 import re
 import random
 import requests
+import copy
 from fractions import Fraction 
 
 import nltk
@@ -70,9 +71,9 @@ def parse_ingredients(recipe):
                             if split_ing[k-1][0] == ')':
                                 word = split_ing[k]
                                 break
-                    if int(ing_dict['quantity']) > 1 and word[1] == 'NNS' and word[0] in ['cans', 'packages']:
+                    if int(ing_dict['quantity']) > 1 and word[1] == 'NNS' and word[0] in ['cans', 'packages', 'jiggers', 'bottles', 'jars', 'pieces', 'bags', 'envelopes']:
                         ing_dict['measure'] = m + ' ' + word[0]
-                    elif int(ing_dict['quantity']) <= 1 and word[1] == 'NN' and word[0] in ['can', 'package']:
+                    elif int(ing_dict['quantity']) <= 1 and word[1] == 'NN' and word[0] in ['can', 'package', 'jigger', 'bottle', 'jar', 'piece', 'bag', 'envelope']:
                         ing_dict['measure'] = m + ' ' + word[0]
                     else:
                         ing_dict['measure'] = m
@@ -240,7 +241,6 @@ def double_it(ingredients, directions):
         except ValueError:
             pass
 
-    print(t_ingredients)
     return t_ingredients, t_directions
 
 def half_it(ingredients, directions):
@@ -263,23 +263,13 @@ def half_it(ingredients, directions):
         except ValueError:
             pass
 
-    print(t_ingredients)
     return t_ingredients, t_directions
 
 def make_it_vegetarian(ingredients, directions):
     t_ingredients = ingredients
     t_directions = directions
-    ''' Steps:
-        1: Transform ingredients with lists
-        2: Store pairs in dict
-        3: Transform steps with new dict and word pairs in dict
-        4: ???
-        5: Profit
-    '''
-    meats = ['beef', 'pork',  'lamb',  'veal',  'bison', 'turkey', 'chicken'] 
 
-    # cuts = ['filet', 'rib', 'sirloin', 'brisket', 'shank', 'flank', 'chuck', 'boneless', 'bone-in',
-    #         'tenderloin', 'ribeye', 'skirt', 't-bone', 'belly', 'shoulder', 'head', 'spare rib', 'loin']
+    meats = ['beef', 'pork',  'lamb',  'veal',  'bison', 'turkey', 'chicken']
 
     birds = ['chicken', 'turkey', 'duck', 'goose', 'drumstick', 'wing', 'thigh', 'rabbit', 'frog', 'breast'] # replace with tofurky
 
@@ -320,7 +310,7 @@ def make_it_vegetarian(ingredients, directions):
 
         ing['prep'] = []
         replacement[temp] = ing['item']
-        if ing['measure'][-1] == ')':
+        if ing['measure'] and ing['measure'][-1] == ')':
             ing['measure'] += (' packages' if float(ing['quantity']) > 1 else ' package')
 
     w = (' '.join(replacement.keys())).split()
@@ -352,9 +342,89 @@ def make_it_vegetarian(ingredients, directions):
 
         step['string'] = (' '.join(sentence)).replace('  ', ' ')
 
-    print(t_ingredients)
-    print()
-    print(t_directions)
+    return t_ingredients, t_directions
+
+def make_it_nonvegetarian(ingredients, directions):
+    t_ingredients = ingredients
+    t_directions = directions
+
+    if any('bacon bits' in b['item'] for b in t_ingredients): # already transformed
+        return t_ingredients, t_directions
+
+    for i in range(len(t_ingredients)):
+        if 'eggplant' in t_ingredients[i]['item']:
+            t_ingredients[i]['item'] = 'ground beef'
+            break
+        elif 'tofu' in t_ingredients[i]['item']:
+            t_ingredients[i]['item'] = 'ground beef'
+            break
+        elif 'jackfruit' in t_ingredients[i]['item']:
+            t_ingredients[i]['item'] = 'ground beef'
+            break
+        elif 'tempeh' in t_ingredients[i]['item']:
+            t_ingredients[i]['item'] = 'ground beef'
+            break
+        elif 'mushroom' in t_ingredients[i]['item']:
+            t_ingredients[i]['item'] = 'ground beef'
+            break
+        elif 'tofurky' in t_ingredients[i]['item']:
+            t_ingredients[i]['item'] = 'ground beef'
+            break
+    else:
+        ing_dict = {'string':'', 'quantity':'', 'measure':'', 'item': 'bacon bits to taste', 'prep':'', 'descriptor':[]}
+        dir_dict =  {'string':'{method} bacon bits until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':[], 'times':[]}
+        t_ingredients.append(ing_dict)
+        t_directions.append(dir_dict)
+        return t_ingredients, t_directions
+
+    if t_ingredients[i]['measure'] and t_ingredients[i]['measure'][-1] == ')':
+        t_ingredients[i]['measure'] += ' packages' if float(t_ingredients[i]['quantity']) > 1 else ' package'
+
+    for step in t_directions:
+        sentence = step['string'].split()
+        for k in range(len(sentence)):
+            if 'eggplant' in sentence[k]:
+                sentence[k] = 'ground beef'
+            elif 'tofu' in sentence[k]:
+                sentence[k] = 'ground beef'
+            elif 'jackfruit' in sentence[k]:
+                sentence[k] = 'ground beef'
+            elif 'tempeh' in sentence[k]:
+                sentence[k] = 'ground beef'
+            elif 'mushroom' in sentence[k]:
+                sentence[k] = 'ground beef'
+            elif 'tofurky' in sentence[k]:
+                sentence[k] = 'ground beef'
+            else:
+                continue
+        
+            step['string'] = (' '.join(sentence)).replace('  ', ' ')
+
+    return t_ingredients, t_directions
+
+def make_it_healthy(ingredients, directions):
+    t_ingredients = ingredients
+    t_directions = directions
+
+    unhealthies = ['oil', 'salt', 'sugar', 'sauce', 'ketchup', 'mayo', 'butter', 'mustard', 'honey', 'chocolate', 'cream', 'fudge', 'marshmallow', 'caramel',
+                    'yogurt', 'shortening', 'syrup', 'milk', 'cheese', 'seasoning', 'powder', 'molasses', 'beer', 'wine', 'gravy', 'dressing']
+
+    for ing in t_ingredients:
+        if any(u in ing['item'] for u in unhealthies):
+            ing['quantity'] = str(float(ing['quantity']) * 0.5)
+
+    return t_ingredients, t_directions
+
+def make_it_unhealthy(ingredients, directions):
+    t_ingredients = ingredients
+    t_directions = directions
+
+    unhealthies = ['oil', 'salt', 'sugar', 'sauce', 'ketchup', 'mayo', 'butter', 'mustard', 'honey', 'chocolate', 'cream', 'fudge', 'marshmallow', 'caramel',
+                    'yogurt', 'shortening', 'syrup', 'milk', 'cheese', 'seasoning', 'powder', 'molasses', 'beer', 'wine', 'gravy', 'dressing']
+
+    for ing in t_ingredients:
+        if any(u in ing['item'] for u in unhealthies):
+            ing['quantity'] = str(float(ing['quantity']) * 2)
 
     return t_ingredients, t_directions
 
@@ -362,6 +432,9 @@ def main():
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
         # recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/256662/jackfruit-curry-kathal-subzi/'
+        recipe_url = 'https://www.allrecipes.com/recipe/14069/vegan-lasagna-i/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/220067/3-cheese-eggplant-lasagna/'
         # recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
         # recipe_url = 'https://www.allrecipes.com/recipe/230117/gluten-free-thanksgiving-stuffing/'
         # recipe_url = 'https://www.allrecipes.com/recipe/88921/shrimp-wellington/'
@@ -374,7 +447,7 @@ def main():
         # recipe_url = 'https://www.allrecipes.com/recipe/132814/easy-yet-romantic-filet-mignon/'
         # recipe_url = 'https://www.allrecipes.com/recipe/212892/alligator-animal-italian-bread/'
         # recipe_url = 'https://www.allrecipes.com/recipe/232908/chef-johns-meatless-meatballs/'
-        recipe_url = 'https://www.allrecipes.com/recipe/235901/peppercorn-roast-beef/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/235901/peppercorn-roast-beef/'
         # recipe_url = 'https://www.allrecipes.com/recipe/255545/ground-turkey-taco-meat/'
 
         if recipe_url == 'q':
@@ -383,14 +456,14 @@ def main():
             continue
 
         name, o_ingredients, o_directions = fetch_recipe(recipe_url)
-        ingredients = o_ingredients
-        directions = o_directions
+        ingredients = copy.deepcopy(o_ingredients)
+        directions = copy.deepcopy(o_directions)
         fresh = True
 
         openers = ['Wow!', 'Oh,', 'Huh,', 'Mmm,']
         closers = ['Sounds tasty!', 'Smells delicious.', 'Looks great!']
         options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it nonvegetarian',
-                    'Make it healthier', 'Make it unhealthier', 'Make it Japanese', 'Make it Pan Asian',
+                    'Make it healthy', 'Make it unhealthy', 'Make it Japanese', 'Make it Pan Asian',
                     'Double it', 'Half it']
         history = []
         
@@ -409,8 +482,43 @@ def main():
             elif n >= len(options):
                 print(f'\nInvalid selection: {n}\n')
             else:
-                ingredients, directions = eval(options[n].lower().replace(' ', '_')+'(ingredients, directions)')
-                pass
+                new_trans = options[n].lower().replace(' ', '_')
+                if 'nonvegetarian' in new_trans and any(h == 'make_it_vegetarian' for h in history):
+                    for i in range(len(history)):
+                        if 'make_it_vegetarian' == history[i]:
+                            del history[i]
+                            break
+
+                    ingredients = copy.deepcopy(o_ingredients)
+                    directions = copy.deepcopy(o_directions)
+                    for h in history:
+                        trans_fun = f"{h}(ingredients, directions)"
+                        ingredients, directions = eval(trans_fun)
+
+                elif 'vegetarian' in new_trans and any(h == 'make_it_nonvegetarian' for h in history):
+                    for i in range(len(history)):
+                        if 'make_it_nonvegetarian' == history[i]:
+                            del history[i]
+                            break
+
+                    ingredients = copy.deepcopy(o_ingredients)
+                    directions = copy.deepcopy(o_directions)
+                    for h in history:
+                        trans_fun = f"{h}(ingredients, directions)"
+                        ingredients, directions = eval(trans_fun)
+
+                else:
+                    temp_i, temp_d = copy.deepcopy(ingredients), copy.deepcopy(directions)
+                    trans_fun = f"{new_trans}(ingredients, directions)"
+                    ingredients, directions = eval(trans_fun)
+                    if temp_i != ingredients or temp_d != directions:
+                        history.append(new_trans)
+                        
+
+                # DO RECONSTRUCTION HERE
+                print(ingredients)
+                print()
+                print(directions)
 
 '''
 NOTES
@@ -425,16 +533,6 @@ Pull a bunch of recipes from allrecipes with the same genre as the desired trans
 Then scrape the stuff from it
 
 --------------------------------------------------------------------------------------------
-
-*** To Vegetarian:
-Hardcode a list of common meats (chicken, beef, turkey?)
-Eliminate from recipe (easy)
-Substitute (tofu, vegetarian bacon, tofurkey) if possible
-
-Keep a search string, append dish name to it
-find similar dishes without meat
-Bit redundant
-
 --------------------------------------------------------------------------------------------
 
 *** From Vegetarian:
@@ -456,10 +554,6 @@ Do the same stuff, keep a map of unhealthy stuff to healthy stuff
 Add a bunch of butter
 
 --------------------------------------------------------------------------------------------
-
-*** Scaling (double and cut in half):
-Just multiply/divide the quantities
-
 --------------------------------------------------------------------------------------------
 
 *** To/From Japanese:
