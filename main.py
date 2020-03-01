@@ -238,7 +238,7 @@ def reconstruct_ingredients(ingredients, original = False):
 
         sentence = list(filter(lambda word: not '{' in word, sentence))
 
-        print(' '.join(sentence))
+        print(' '.join(sentence).replace('  ', ' ').replace(',,', ','))
 
 def reconstruct_directions(directions, original = False):
     intro = '\nYour steps were:\n' if original else '\nYour new steps are:\n'
@@ -263,16 +263,17 @@ def reconstruct_directions(directions, original = False):
             if j == 0 or '.' in sentence[j-1]:
                 sentence[j] = sentence[j].capitalize()
 
-        print(' '.join(sentence))
+        print(' '.join(sentence).replace('  ', ' ').replace(',,', ' '))
 
 def main():
     nltk.download('punkt')
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
-        # recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
+        recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
+        recipe_url = 'https://www.allrecipes.com/recipe/221162/minute-steaks-with-barbeque-butter-sauce/'
         # recipe_url = 'https://www.allrecipes.com/recipe/256662/jackfruit-curry-kathal-subzi/'
         # recipe_url = 'https://www.allrecipes.com/recipe/14069/vegan-lasagna-i/'
-        recipe_url = 'https://www.allrecipes.com/recipe/77215/roasted-beets-n-sweets/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/77215/roasted-beets-n-sweets/'
         # recipe_url = 'https://www.allrecipes.com/recipe/212636/japanese-beef-stir-fry/'
         # recipe_url = 'https://www.allrecipes.com/recipe/220067/3-cheese-eggplant-lasagna/'
         # recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
@@ -366,32 +367,6 @@ def main():
                 print('\n'+'-'*20)
                 reconstruct_directions(directions)
                 print()
-
-'''
-NOTES
-
-MAYBE JUST MAYBE
-We can keep a history of all transformations, and if two opposite transformations happen, remove them from the history and rerun all trans on the og ingredients and steps
-
-For Parsing into steps, maybe slice the og stuff out, transform separately, then splice it back in
-
-MAYBE JUST MAYBE
-Pull a bunch of recipes from allrecipes with the same genre as the desired transformation
-Then scrape the stuff from it
-
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------
-
-?? *** To/From Vegan
-
-'''
 
 if __name__ == "__main__":
     main()

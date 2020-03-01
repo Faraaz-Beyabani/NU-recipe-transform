@@ -17,7 +17,7 @@ Make it vegetarian replaces meats with certain meat substitutes, such as tofu an
 
 Make it non-vegetarian replaces meat substitutes with meats, unless it can't find any, at which point it adds bacon bits to the recipe.
 
-Make it healthier and unhealthier reduce and increase (respectively) the amount of sugar, cream, powder, paste, oil, and other typically 'fatty' or unhealthy ingredients.
+Make it healthier and unhealthier reduce and increase (respectively) the amount of sugar, cream, powder, paste, oil, and other typically 'fatty' or unhealthy ingredients by a factor of 2.
 
 Make it Japanese substitutes certain fruits, seasonings, and sauces with their Japanese variants (yuzu, mikan, rice vinegar, etc.).
 

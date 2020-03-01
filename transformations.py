@@ -19,7 +19,7 @@ def double_it(ingredients, directions):
                     t_ingredients[i][temp] = t_ingredients[i][temp].replace('loaf', 'loaves')
                 elif 'shrimp' not in t_ingredients[i][temp]:
                     t_ingredients[i][temp] += 's'
-        except ValueError:
+        except Exception:
             pass
 
     return t_ingredients, t_directions
@@ -41,7 +41,7 @@ def half_it(ingredients, directions):
                     t_ingredients[i][temp] = t_ingredients[i][temp].replace('loaves', 'loaf')
                 elif t_ingredients[i][temp][-1] == 's':
                     t_ingredients[i][temp] = t_ingredients[i][temp][:-1]
-        except ValueError:
+        except Exception:
             pass
 
     return t_ingredients, t_directions
@@ -67,6 +67,7 @@ def make_it_vegetarian(ingredients, directions):
     replacement = {}
     v = ['tempeh', 'mushrooms', 'mushroom', 'tofu', 'tofurky']
 
+    simple = False
     for ing in t_ingredients:
         temp = ing['item']
 
@@ -78,6 +79,7 @@ def make_it_vegetarian(ingredients, directions):
             ing['item'] = 'cauliflower steak'
         elif 'ground' in ing['item'] and any(m in ing['item'] for m in meats):
             ing['item'] = 'impossible ground beef'
+            simple = True
         elif any(b in ing['item'] for b in birds):
             ing['item'] = 'tofurky'
         elif any(f in ing['item'] for f in fish):
@@ -94,7 +96,7 @@ def make_it_vegetarian(ingredients, directions):
             continue
 
         ing['prep'] = []
-        replacement[temp] = ing['item']
+        replacement[temp] = ing['item'].replace('impossible ', '')
         if ing['measure'] and ing['measure'][-1] == ')':
             ing['measure'] += (' packages' if float(ing['quantity']) > 1 else ' package')
 
@@ -109,8 +111,7 @@ def make_it_vegetarian(ingredients, directions):
 
             if sentence[i] == 'meat' or sentence[i] == 'fish':
                 sentence[i] = list(replacement.values())[0]
-
-            if any(b in sentence[i] for b in birds):
+            elif any(b in sentence[i] for b in birds):
                 sentence[i] = 'tofurky'
             elif any(f in sentence[i] for f in fish):
                 sentence[i] = 'tofu'
@@ -120,7 +121,7 @@ def make_it_vegetarian(ingredients, directions):
                 sentence[i] = 'tempeh'
             elif any(s in sentence[i] for s in misc_sea):
                 sentence[i] = 'lobster mushrooms'
-            elif any(m in sentence[i] for m in meats):
+            elif any(m in sentence[i] for m in meats) and not simple:
                 sentence[i] = 'tofu'
             else:
                 continue
@@ -187,6 +188,18 @@ def make_it_nonvegetarian(ingredients, directions):
 
     return t_ingredients, t_directions
 
+def steps_replacer(steps, old, new):
+    split_old = old.split()
+    new_last = new.split()[-1]
+    if len(split_old) >= 2:
+        for i in range(len(split_old) - 1):
+            ing = split_old[i] + ' ' + split_old[i+1]
+            for step in steps:
+                step['string'] = (step['string'].replace(ing, new)
+                                                .replace(new_last+' '+new_last, new_last))
+
+    return steps
+
 def make_it_japanese(ingredients, directions):
     t_ingredients = ingredients
     t_directions = directions
@@ -211,11 +224,6 @@ def make_it_japanese(ingredients, directions):
             recipe_sweet += 1
         if any(s in ing['item'] for s in savor):
             recipe_savor += 1
-
-    print('\n\n\n')
-    print('sweety:', recipe_sweet)
-    print('savory:', recipe_savor)
-    print('\n\n\n')
         
     for d in t_directions:
         d['string'].replace('lemon', 'yuzu').replace('lime', 'yuzu').replace('orange', 'mikan')
@@ -237,10 +245,11 @@ def make_it_japanese(ingredients, directions):
             t_directions.append(dir_dict)
     else: # savory 
         if any('meat' in d['string'] for d in t_directions):
-            t_ingredients.append({'string':['{quantity}', '{measure}', '{item}', '{desc}'], 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':'or to taste'})
-            t_directions.insert(0, {'string':'{method} the meat for {time} minutes.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
+            t_ingredients.append({'string':['{quantity}', '{measure}', '{item}', '{desc}'], 'quantity':'1', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':'or to taste'})
+            t_directions.insert(0, {'string':'{method} the meat for {time} minutes in teriyaki sauce.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
 
         for i in t_ingredients:
+            original = i['item']
             if 'dressing' in i['item']:
                 i['item'] = 'wafu dressing'
             if 'breadcrumbs' in i['item']:
@@ -257,6 +266,9 @@ def make_it_japanese(ingredients, directions):
                 i['item'] = 'edamame beans'
             if 'sugar' in i['item']:
                 i['item'] = 'brown sugar'
+
+            if original != i['item']:
+                t_directions = steps_replacer(t_directions, original, i['item'])
 
         if not any('furikake' in i['item'] for i in t_ingredients):
             ing_dict = {'string':['furikake to taste (optional)'], 'quantity':'', 'measure':'', 'item': 'furikake to taste', 'prep':'', 'descriptor':'(optional)'}
@@ -303,6 +315,8 @@ def make_it_indian(ingredients, directions):
                 i['item'] = 'jaggery sugar'
             if 'pecans' in i['item']:
                 i['item'] = 'crushed pistachios'
+                for d in t_directions:
+                    d['string'].replace('pecans', 'crushed pistachios')
 
         if not any('pistachios' in i['item'] for i in t_ingredients):
             ing_dict = {'string':['{item}', '{desc}'], 'quantity':'', 'measure':'', 'item': 'crushed pistachios to taste', 'prep':'', 'descriptor':'(optional)'}
@@ -311,10 +325,11 @@ def make_it_indian(ingredients, directions):
             t_directions.append(dir_dict)
     else: # savory 
         if any('meat' in d['string'] for d in t_directions):
-            t_ingredients.append({'string':['{quantity}', '{measure}', '{item}', '{desc}'], 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':'or to taste'})
-            t_directions.insert(0, {'string':'{method} the meat for {time} minutes.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
+            t_ingredients.append({'string':['{quantity}', '{measure}', '{item}', '{desc}'], 'quantity':'1', 'measure':'cup', 'item':'masala sauce', 'prep':'', 'descriptor':'or to taste'})
+            t_directions.insert(0, {'string':'{method} the meat for {time} minutes in the masala sauce.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
 
         for i in t_ingredients:
+            original = i['item']
             if 'yogurt' in i['item']:
                 i['item'] = 'dahi yogurt'
             if 'pepper' in i['item']:
@@ -323,6 +338,8 @@ def make_it_indian(ingredients, directions):
                 i['item'] = 'masala dressing'
             if 'beans' in i['item']:
                 i['item'] = 'lentils'
+                for d in t_directions:
+                    d['string'].replace('beans', 'lentils')
             if 'broth' in i['item']:
                 i['item'] = 'mutton broth'
             if 'stock' in i['item']:
@@ -333,8 +350,15 @@ def make_it_indian(ingredients, directions):
                 i['item'] = 'basmati rice'
             if 'pecans' in i['item']:
                 i['item'] = 'crushed pistachios'
+                for d in t_directions:
+                    d['string'].replace('pecans', 'crushed pistachios')
             if 'paprika' in i['item']:
                 i['item'] = 'coriander seeds'
+                for d in t_directions:
+                    d['string'].replace('paprika', 'coriander seeds')
+
+            if original != i['item']:
+                t_directions = steps_replacer(t_directions, original, i['item'])
 
         if not any('curry' in i['item'] for i in t_ingredients):
             ing_dict = {'string':['{item}', '{desc}'], 'quantity':'', 'measure':'', 'item': 'curry powder to taste', 'prep':'', 'descriptor':'(optional)'}
@@ -352,7 +376,7 @@ def make_it_healthy(ingredients, directions):
                     'yogurt', 'shortening', 'syrup', 'milk', 'cheese', 'seasoning', 'powder', 'molasses', 'beer', 'wine', 'gravy', 'dressing']
 
     for ing in t_ingredients:
-        if any(u in ing['item'] for u in unhealthies):
+        if any(u in ing['item'] for u in unhealthies) and ing['quantity']:
             ing['quantity'] = str(float(ing['quantity']) * 0.5)
 
     return t_ingredients, t_directions
@@ -365,7 +389,7 @@ def make_it_unhealthy(ingredients, directions):
                     'yogurt', 'shortening', 'syrup', 'milk', 'cheese', 'seasoning', 'powder', 'molasses', 'beer', 'wine', 'gravy', 'dressing']
 
     for ing in t_ingredients:
-        if any(u in ing['item'] for u in unhealthies):
+        if any(u in ing['item'] for u in unhealthies) and ing['quantity']:
             ing['quantity'] = str(float(ing['quantity']) * 2)
 
     return t_ingredients, t_directions
