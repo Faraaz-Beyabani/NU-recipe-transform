@@ -42,7 +42,7 @@ def parse_ingredients(recipe):
     ing_lists = recipe.find_all('ul', id=re.compile(r'lst_ingredients.*'))
     ingredients = []
     for sub_list in ing_lists:
-        ingredients += [i for i in [scrape_ingredient(i) for i in sub_list] if i]
+        ingredients += [i.lower() for i in [scrape_ingredient(i) for i in sub_list] if i]
     pos_ings = [nltk.pos_tag(word_tokenize(i)) for i in ingredients]
 
     measurements = set()
@@ -71,9 +71,9 @@ def parse_ingredients(recipe):
                             if split_ing[k-1][0] == ')':
                                 word = split_ing[k]
                                 break
-                    if int(ing_dict['quantity']) > 1 and word[1] == 'NNS' and word[0] in ['cans', 'packages', 'jiggers', 'bottles', 'jars', 'pieces', 'bags', 'envelopes']:
+                    if float(ing_dict['quantity']) > 1 and word[0] in ['cans', 'packages', 'jiggers', 'bottles', 'jars', 'pieces', 'bags', 'envelopes']:
                         ing_dict['measure'] = m + ' ' + word[0]
-                    elif int(ing_dict['quantity']) <= 1 and word[1] == 'NN' and word[0] in ['can', 'package', 'jigger', 'bottle', 'jar', 'piece', 'bag', 'envelope']:
+                    elif float(ing_dict['quantity']) <= 1 and word[0] in ['can', 'package', 'jigger', 'bottle', 'jar', 'piece', 'bag', 'envelope']:
                         ing_dict['measure'] = m + ' ' + word[0]
                     else:
                         ing_dict['measure'] = m
@@ -205,18 +205,6 @@ def scrape_directions(recipe):
     dir_list = recipe.find('ol', class_='recipe-directions__list').find_all('li')
     return [d.span.text.strip() for d in dir_list]
 
-def reconstruct_ingredients(ingredients):
-    item = 0
-    prep = 0
-    desc = 0
-    meas = 0
-
-def reconstruct_directions(directions):
-    tool = 0
-    method = 0
-    ingredients = 0
-    times = 0
-
 def double_it(ingredients, directions):
     t_ingredients = ingredients
     t_directions = directions
@@ -289,7 +277,11 @@ def make_it_vegetarian(ingredients, directions):
     for ing in t_ingredients:
         temp = ing['item']
 
-        if 'steak' in ing['item']:
+        if 'broth' in ing['item']:
+            ing['item'] = 'veggie broth'
+        elif 'stock' in ing['item']:
+            ing['item'] = 'veggie stock'
+        elif 'steak' in ing['item']:
             ing['item'] = 'cauliflower steak'
         elif 'ground' in ing['item'] and any(m in ing['item'] for m in meats):
             ing['item'] = 'impossible ground beef'
@@ -371,7 +363,7 @@ def make_it_nonvegetarian(ingredients, directions):
             t_ingredients[i]['item'] = 'ground beef'
             break
     else:
-        ing_dict = {'string':'', 'quantity':'', 'measure':'', 'item': 'bacon bits to taste', 'prep':'', 'descriptor':[]}
+        ing_dict = {'string':'{item', 'quantity':'', 'measure':'', 'item': 'bacon bits to taste', 'prep':'', 'descriptor':[]}
         dir_dict =  {'string':'{method} bacon bits until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':[], 'times':[]}
         t_ingredients.append(ing_dict)
         t_directions.append(dir_dict)
@@ -402,6 +394,157 @@ def make_it_nonvegetarian(ingredients, directions):
 
     return t_ingredients, t_directions
 
+def make_it_japanese(ingredients, directions):
+    t_ingredients = ingredients
+    t_directions = directions
+
+    sweet = ['sugar', 'fruit', 'honey', 'cream', 'chocolate', 'fudge', 'marshmallow', 'caramel', 'syrup', 'sweet']
+    savor = ['vegetable', 'cabbage', 'mushroom', 'onion', 'peppers', 'tofu', 'cauliflower', 'eggplant', 
+            'broth', 'steak', 'meat', 'fish', 'beef', 'pork', 'chicken', 'salt', 'pepper', 'tempeh', 'tofurky',
+            'vinegar', 'ketchup', 'mayo', 'mustard', 'gravy', 'dressing', 'hot sauce', 'sriracha', 'tobasco', 
+            'barbecue', 'spinach', 'salad' ,'olive oil']
+
+    recipe_sweet = 0
+    recipe_savor = 0
+
+    for step in t_directions:
+        for s in step['string'].split():
+            if any(sw in s for sw in sweet):
+                recipe_sweet += 1
+            if any(sv in s for sv in savor):
+                recipe_savor += 1
+    for ing in t_ingredients:
+        if any(s in ing['item'] for s in sweet):
+            recipe_sweet += 1
+        if any(s in ing['item'] for s in savor):
+            recipe_savor += 1
+
+    print('\n\n\n')
+    print('sweety:', recipe_sweet)
+    print('savory:', recipe_savor)
+    print('\n\n\n')
+        
+    for d in t_directions:
+        d['string'].replace('lemon', 'yuzu').replace('lime', 'yuzu').replace('orange', 'mikan')
+    for i in t_ingredients:
+        if 'lemon' in i['item'] or 'lime' in i['item']:
+            i['item'].replace('lemon', 'yuzu').replace('lime', 'yuzu').replace('orange', 'mikan')
+
+    if recipe_sweet > 0 and recipe_savor <= 4: # sweet
+        for i in t_ingredients:
+            if 'flour' in i['item']:
+                i['item'] = 'mochiko flour'
+            if 'sugar' in i['item']:
+                i['item'] = 'wasanbon sugar'
+
+        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'kinako to taste', 'prep':'', 'descriptor':['(optional)']}
+        dir_dict =  {'string':'{method} kinako until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['kinako'], 'times':[]}
+        t_ingredients.append(ing_dict)
+        t_directions.append(dir_dict)
+    else: # savory 
+        if any('meat' in d['string'] for d in t_directions):
+            t_ingredients.append({'string':'{quantity} {measure} {item}', 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':['or to taste']})
+            t_directions.insert(0, {'string':'{method} the meat for {time} minutes.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
+
+        for i in t_ingredients:
+            if 'dressing' in i['item']:
+                i['item'] = 'wafu dressing'
+            if 'breadcrumbs' in i['item']:
+                i['item'] = 'panko breadcrumbs'
+            if 'vinegar' in i['item']:
+                i['item'] = 'rice vinegar'
+            if 'broth' in i['item']:
+                i['item'] = 'dashi broth'
+            if 'stock' in i['item']:
+                i['item'] = 'dashi stock'
+            if 'hot sauce' in i['item']:
+                i['item'] = 'wasabi hot sauce'
+            if 'beans' in i['item']:
+                i['item'] = 'edamame beans'
+            if 'sugar' in i['item']:
+                i['item'] = 'brown sugar'
+
+        ing_dict = {'string':'furikake to taste (optional)', 'quantity':'', 'measure':'', 'item': 'furikake to taste', 'prep':'', 'descriptor':['(optional)']}
+        dir_dict =  {'string':'{method} furikake until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['furikake'], 'times':[]}
+        t_ingredients.append(ing_dict)
+        t_directions.append(dir_dict)
+
+    return t_ingredients, t_directions
+
+def make_it_indian(ingredients, directions):
+    t_ingredients = ingredients
+    t_directions = directions
+
+    sweet = ['sugar', 'fruit', 'honey', 'cream', 'chocolate', 'fudge', 'marshmallow', 'caramel', 'syrup']
+    savor = ['vegetable', 'cabbage', 'mushroom', 'onion', 'peppers', 'tofu', 'cauliflower', 'eggplant', 
+            'broth', 'steak', 'meat', 'fish', 'beef', 'pork', 'chicken', 'salt', 'pepper', 'tempeh', 'tofurky',
+            'vinegar', 'ketchup', 'mayo', 'mustard', 'gravy', 'dressing', 'hot sauce', 'sriracha', 'tobasco', 
+            'barbecue', 'spinach', 'salad', 'olive oil']
+
+    recipe_sweet = 0
+    recipe_savor = 0
+
+    for step in t_directions:
+        if any(s in step['string'] for s in sweet):
+            recipe_sweet += 1
+        elif any(s in step['string'] for s in savor):
+            recipe_savor += 1
+    for ing in t_ingredients:
+        if any(s in ing['item'] for s in sweet):
+            recipe_sweet += 1
+        elif any(s in ing['item'] for s in savor):
+            recipe_savor += 1
+        
+    for d in t_directions:
+        d['string'].replace('butter', 'ghee')
+    for i in t_ingredients:
+        i['item'].replace('butter', 'ghee')
+
+    if recipe_sweet > 0 and recipe_savor <= 4: # sweet
+        for i in t_ingredients:
+            if 'flour' in i['item']:
+                i['item'] = random.choice(['maida flour', 'chick pea flour'])
+            if 'sugar' in i['item']:
+                i['item'] = 'jaggery sugar'
+
+        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'crushed pistachios to taste', 'prep':'', 'descriptor':['(optional)']}
+        dir_dict =  {'string':'{method} crushed pistachios until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['kinako'], 'times':[]}
+        t_ingredients.append(ing_dict)
+        t_directions.append(dir_dict)
+    else: # savory 
+        if any('meat' in d['string'] for d in t_directions):
+            t_ingredients.append({'string':'{quantity} {measure} {item}', 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':['or to taste']})
+            t_directions.insert(0, {'string':'{method} the meat for {time} minutes.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
+
+        for i in t_ingredients:
+            if 'yogurt' in i['item']:
+                i['item'] = 'dahi yogurt'
+            if 'pepper' in i['item']:
+                i['item'] = 'mirchi chile pepper'
+            if 'dressing' in i['item']:
+                i['item'] = 'masala dressing'
+            if 'beans' in i['item']:
+                i['item'] = 'lentils'
+            if 'broth' in i['item']:
+                i['item'] = 'mutton broth'
+            if 'stock' in i['item']:
+                i['item'] = 'mutton stock'
+            if 'hot sauce' in i['item']:
+                i['item'] = 'spicy chutney sauce'
+            if 'rice' in i['item']:
+                i['item'] = 'basmati rice'
+            if 'pecans' in i['item']:
+                i['item'] = 'crushed pistachios'
+            if 'paprika' in i['item']:
+                i['item'] = 'coriander seeds'
+
+        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'curry powder to taste', 'prep':'', 'descriptor':['(optional)']}
+        dir_dict =  {'string':'{method} curry powder until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['kinako'], 'times':[]}
+        t_ingredients.append(ing_dict)
+        t_directions.append(dir_dict)
+
+    return t_ingredients, t_directions
+
 def make_it_healthy(ingredients, directions):
     t_ingredients = ingredients
     t_directions = directions
@@ -428,12 +571,28 @@ def make_it_unhealthy(ingredients, directions):
 
     return t_ingredients, t_directions
 
+
+
+def reconstruct_ingredients(ingredients):
+    item = 0
+    prep = 0
+    desc = 0
+    meas = 0
+
+def reconstruct_directions(directions):
+    tool = 0
+    method = 0
+    ingredients = 0
+    times = 0
+
 def main():
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
         # recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
         # recipe_url = 'https://www.allrecipes.com/recipe/256662/jackfruit-curry-kathal-subzi/'
-        recipe_url = 'https://www.allrecipes.com/recipe/14069/vegan-lasagna-i/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/14069/vegan-lasagna-i/'
+        recipe_url = 'https://www.allrecipes.com/recipe/77215/roasted-beets-n-sweets/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/212636/japanese-beef-stir-fry/'
         # recipe_url = 'https://www.allrecipes.com/recipe/220067/3-cheese-eggplant-lasagna/'
         # recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
         # recipe_url = 'https://www.allrecipes.com/recipe/230117/gluten-free-thanksgiving-stuffing/'
@@ -449,6 +608,7 @@ def main():
         # recipe_url = 'https://www.allrecipes.com/recipe/232908/chef-johns-meatless-meatballs/'
         # recipe_url = 'https://www.allrecipes.com/recipe/235901/peppercorn-roast-beef/'
         # recipe_url = 'https://www.allrecipes.com/recipe/255545/ground-turkey-taco-meat/'
+        # recipe_url = 'https://www.allrecipes.com/recipe/16409/spinach-and-strawberry-salad/'
 
         if recipe_url == 'q':
             return
@@ -463,11 +623,15 @@ def main():
         openers = ['Wow!', 'Oh,', 'Huh,', 'Mmm,']
         closers = ['Sounds tasty!', 'Smells delicious.', 'Looks great!']
         options = ['Exit', 'Enter a new recipe', 'Make it vegetarian', 'Make it nonvegetarian',
-                    'Make it healthy', 'Make it unhealthy', 'Make it Japanese', 'Make it Pan Asian',
+                    'Make it healthy', 'Make it unhealthy', 'Make it Japanese', 'Make it Indian',
                     'Double it', 'Half it']
         history = []
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
+
+        print(o_ingredients)
+        print()
+        print(o_directions)
 
         while True:
             for i,o in enumerate(options):
@@ -534,39 +698,12 @@ Then scrape the stuff from it
 
 --------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------
-
-*** From Vegetarian:
-Hardcode a list of common Substitute (tofu, vegetarian bacon, tofurkey) if possible
-Eliminate from recipe (easy)
-Substitute common meats (chicken, beef, turkey?)
-
-Recommend a meat?
-Maybe search all recipes for a similar recipe and find the meat with the most occurences
-
---------------------------------------------------------------------------------------------
-
-*** To Healthy:
-Do the same stuff, keep a map of unhealthy stuff to healthy stuff
-
---------------------------------------------------------------------------------------------
-
-*** From Healthy:
-Add a bunch of butter
-
 --------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------
-
-*** To/From Japanese:
-mochi stuff
-
 --------------------------------------------------------------------------------------------
-
-*** To/From {OTHER CUISINE}
-
 --------------------------------------------------------------------------------------------
-
-?? *** List Calorie Count Assoc. With Meal
-
+--------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------
 
 ?? *** To/From Vegan
