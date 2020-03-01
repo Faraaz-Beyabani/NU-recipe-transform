@@ -48,7 +48,7 @@ def parse_ingredients(recipe):
     measurements = set()
     ing_stats = []
     for i, split_ing in enumerate(pos_ings):
-        ing_dict = {'string':'', 'quantity':'', 'measure':'', 'item':'', 'prep':'', 'descriptor':[]}
+        ing_dict = {'string':'', 'quantity':'', 'measure':'', 'item':'', 'prep':'', 'descriptor':''}
         item = []
         string = [''] * len(split_ing)
         for j, part in enumerate(split_ing):
@@ -108,6 +108,10 @@ def parse_ingredients(recipe):
             elif not any(part[0] in v for v in ing_dict.values()) and part[1] != 'CD':
                 item += [part[0]]
                 string[k] = '{item}'
+            
+            if k < len(split_ing) - 1 and split_ing[k+1][0] == ',':
+                string[k] += ','
+
 
         if item:
             ing_dict['item'] = ' '.join(item)
@@ -159,12 +163,13 @@ def parse_directions(directions, ingredient_stats):
 
         for i in range(len(split_step)):
             o_word = split_step[i]
-            word = re.sub(r'\W+', '', o_word)
-            end = ''
             if ',' in o_word:
                 end = ','
             elif '.' in o_word:
                 end = '.'
+            else:
+                end = ''
+            word = re.sub(r'\W+', '', o_word)
 
             if any(f' {word} ' in f' {t} ' for t in tools):
                 for t in tools:
@@ -177,11 +182,11 @@ def parse_directions(directions, ingredient_stats):
                                 if split_t[j] != split_step[i+j]:
                                     break
                             else:
-                                split_step[i] = '{tool}'
+                                split_step[i] = '{tool}'+end
                                 split_step[i+1:i+j+1] = ['']*((i+j+1)-(i+1))
                                 step_stats['tools'] += [t]
                         else:
-                            split_step[i] = '{tool}'
+                            split_step[i] = '{tool}'+end
                             step_stats['tools'] += [t]
 
             elif any(f' {word} ' in f' {m} ' for m in primary_methods) or any(f' {word} ' in f' {m} ' for m in secondary_methods):
@@ -190,7 +195,6 @@ def parse_directions(directions, ingredient_stats):
 
             elif any(any(word == part for part in ingredient.lower().split()) for ingredient in ingredients):
                 step_stats['ingredients'].append(word)
-                # split_step[i] = '{ingredient}'+end
 
             elif word.isdigit() and re.sub(r'\W+', '', split_step[i+1]) in ['hours', 'hour', 'minutes', 'minute', 'seconds']:
                 step_stats['times'].append(word)
@@ -363,7 +367,7 @@ def make_it_nonvegetarian(ingredients, directions):
             t_ingredients[i]['item'] = 'ground beef'
             break
     else:
-        ing_dict = {'string':'{item', 'quantity':'', 'measure':'', 'item': 'bacon bits to taste', 'prep':'', 'descriptor':[]}
+        ing_dict = {'string':'{item}', 'quantity':'', 'measure':'', 'item': 'bacon bits to taste', 'prep':'', 'descriptor':''}
         dir_dict =  {'string':'{method} bacon bits until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':[], 'times':[]}
         t_ingredients.append(ing_dict)
         t_directions.append(dir_dict)
@@ -437,13 +441,13 @@ def make_it_japanese(ingredients, directions):
             if 'sugar' in i['item']:
                 i['item'] = 'wasanbon sugar'
 
-        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'kinako to taste', 'prep':'', 'descriptor':['(optional)']}
+        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'kinako to taste', 'prep':'', 'descriptor':'(optional)'}
         dir_dict =  {'string':'{method} kinako until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['kinako'], 'times':[]}
         t_ingredients.append(ing_dict)
         t_directions.append(dir_dict)
     else: # savory 
         if any('meat' in d['string'] for d in t_directions):
-            t_ingredients.append({'string':'{quantity} {measure} {item}', 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':['or to taste']})
+            t_ingredients.append({'string':'{quantity} {measure} {item}, desc', 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':'or to taste'})
             t_directions.insert(0, {'string':'{method} the meat for {time} minutes.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
 
         for i in t_ingredients:
@@ -464,7 +468,7 @@ def make_it_japanese(ingredients, directions):
             if 'sugar' in i['item']:
                 i['item'] = 'brown sugar'
 
-        ing_dict = {'string':'furikake to taste (optional)', 'quantity':'', 'measure':'', 'item': 'furikake to taste', 'prep':'', 'descriptor':['(optional)']}
+        ing_dict = {'string':'furikake to taste (optional)', 'quantity':'', 'measure':'', 'item': 'furikake to taste', 'prep':'', 'descriptor':'(optional)'}
         dir_dict =  {'string':'{method} furikake until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['furikake'], 'times':[]}
         t_ingredients.append(ing_dict)
         t_directions.append(dir_dict)
@@ -507,13 +511,13 @@ def make_it_indian(ingredients, directions):
             if 'sugar' in i['item']:
                 i['item'] = 'jaggery sugar'
 
-        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'crushed pistachios to taste', 'prep':'', 'descriptor':['(optional)']}
-        dir_dict =  {'string':'{method} crushed pistachios until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['kinako'], 'times':[]}
+        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'crushed pistachios to taste', 'prep':'', 'descriptor':'(optional)'}
+        dir_dict =  {'string':'{method} crushed pistachios until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['pistachios'], 'times':[]}
         t_ingredients.append(ing_dict)
         t_directions.append(dir_dict)
     else: # savory 
         if any('meat' in d['string'] for d in t_directions):
-            t_ingredients.append({'string':'{quantity} {measure} {item}', 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':['or to taste']})
+            t_ingredients.append({'string':'{quantity} {measure} {item}, {desc}', 'quantity':'0.5', 'measure':'cup', 'item':'teriyaki sauce', 'prep':'', 'descriptor':'or to taste'})
             t_directions.insert(0, {'string':'{method} the meat for {time} minutes.', 'tools':[], 'methods':['marinate'], 'ingredients':['meat'], 'times':['20']})
 
         for i in t_ingredients:
@@ -538,8 +542,8 @@ def make_it_indian(ingredients, directions):
             if 'paprika' in i['item']:
                 i['item'] = 'coriander seeds'
 
-        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'curry powder to taste', 'prep':'', 'descriptor':['(optional)']}
-        dir_dict =  {'string':'{method} curry powder until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['kinako'], 'times':[]}
+        ing_dict = {'string':'{item} {desc}', 'quantity':'', 'measure':'', 'item': 'curry powder to taste', 'prep':'', 'descriptor':'(optional)'}
+        dir_dict =  {'string':'{method} curry powder until satisfied.', 'tools':[], 'methods':['sprinkle'], 'ingredients':['curry powder'], 'times':[]}
         t_ingredients.append(ing_dict)
         t_directions.append(dir_dict)
 
@@ -574,16 +578,55 @@ def make_it_unhealthy(ingredients, directions):
 
 
 def reconstruct_ingredients(ingredients):
-    item = 0
-    prep = 0
-    desc = 0
-    meas = 0
+    print('\nYour new ingredients are:\n')
+
+    for ing in ingredients:
+        q=i=p=d=m = False   # quantity, item, prep, desc, and measure trackers
+
+        sentence = ing['string']
+        for j in range(len(sentence)):
+            if '{quantity}' in sentence[j] and not q:
+                sentence[j] = sentence[j].replace('{quantity}', str(Fraction(float(ing['quantity']))))
+                q = True
+            elif '{prep}' in sentence[j] and not p:
+                sentence[j] = sentence[j].replace('{prep}', ing['prep'])
+                p = True
+            elif '{desc}' in sentence[j] and not d:
+                sentence[j] = sentence[j].replace('{desc}', ing['descriptor'])
+                d = True
+            elif '{measure}' in sentence[j] and not m:
+                sentence[j] = sentence[j].replace('{measure}', ing['measure'])
+                m = True
+            elif '{item}' in sentence[j] and not i:
+                sentence[j] = sentence[j].replace('{item}', ing['item']+',') if ing['prep'] else sentence[j].replace('{item}', ing['item'])
+                i = True
+
+        sentence = list(filter(lambda word: not '{' in word, sentence))
+
+        print(' '.join(sentence))
 
 def reconstruct_directions(directions):
-    tool = 0
-    method = 0
-    ingredients = 0
-    times = 0
+    print('\nYour new steps are:\n')
+
+    for step in directions:
+        tools=methods=times = 0   # tools, methods, and times counters
+
+        sentence = step['string'].split()
+        for j in range(len(sentence)):
+            if '{tool}' in sentence[j] and tools < len(step['tools']):
+                sentence[j] = sentence[j].replace('{tool}', step['tools'][tools])
+                tools += 1
+            elif '{method}' in sentence[j] and methods < len(step['methods']):
+                sentence[j] = sentence[j].replace('{method}', step['methods'][methods])
+                methods += 1
+            elif '{time}' in sentence[j] and times < len(step['times']):
+                sentence[j] = sentence[j].replace('{time}', step['times'][times])
+                times += 1
+
+            if j == 0 or '.' in sentence[j-1]:
+                sentence[j] = sentence[j].capitalize()
+
+        print(' '.join(sentence))
 
 def main():
     while True:
@@ -629,9 +672,9 @@ def main():
         
         print(f'\n{random.choice(openers)} {name}? {random.choice(closers)}\n')
 
-        print(o_ingredients)
+        reconstruct_ingredients(o_ingredients)
         print()
-        print(o_directions)
+        reconstruct_directions(o_directions)
 
         while True:
             for i,o in enumerate(options):
@@ -677,12 +720,12 @@ def main():
                     ingredients, directions = eval(trans_fun)
                     if temp_i != ingredients or temp_d != directions:
                         history.append(new_trans)
-                        
 
-                # DO RECONSTRUCTION HERE
-                print(ingredients)
+                print('\n'+'*'*20)
+                reconstruct_ingredients(ingredients)
+                print('\n'+'-'*20)
+                reconstruct_directions(directions)
                 print()
-                print(directions)
 
 '''
 NOTES
