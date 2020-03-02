@@ -221,7 +221,7 @@ def reconstruct_ingredients(ingredients, original = False):
         sentence = ing['string']
         for j in range(len(sentence)):
             if '{quantity}' in sentence[j] and not q:
-                sentence[j] = sentence[j].replace('{quantity}', str(Fraction(float(ing['quantity']))))
+                sentence[j] = sentence[j].replace('{quantity}', str(Fraction(float(ing['quantity'])).limit_denominator()))
                 q = True
             elif '{prep}' in sentence[j] and not p:
                 sentence[j] = sentence[j].replace('{prep}', ing['prep'])
@@ -237,15 +237,20 @@ def reconstruct_ingredients(ingredients, original = False):
                 i = True
 
         sentence = list(filter(lambda word: not '{' in word, sentence))
+        fixed_string = (re.sub(' +', ' ', ' '.join(sentence).replace(',,', ',')
+                                                            .replace(' ,', ',')
+                                                            .replace("''", 'inch')
+                                                            .replace(' -', '-')
+                                                            .replace(" '", "'")))
 
-        print(' '.join(sentence).replace('  ', ' ').replace(',,', ','))
+        print(fixed_string)
 
 def reconstruct_directions(directions, original = False):
     intro = '\nYour steps were:\n' if original else '\nYour new steps are:\n'
     print(intro)
     d_copy = copy.deepcopy(directions)
 
-    for step in d_copy:
+    for l, step in enumerate(d_copy):
         tools=methods=times = 0   # tools, methods, and times counters
 
         sentence = step['string'].split()
@@ -263,34 +268,12 @@ def reconstruct_directions(directions, original = False):
             if j == 0 or '.' in sentence[j-1]:
                 sentence[j] = sentence[j].capitalize()
 
-        print(' '.join(sentence).replace('  ', ' ').replace(',,', ' '))
+        print(f'{l+1}.', ' '.join(sentence).replace('  ', ' ').replace(',,', ' '))
 
 def main():
     nltk.download('punkt')
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
-        recipe_url = 'https://www.allrecipes.com/recipe/213268/classic-goulash/'
-        recipe_url = 'https://www.allrecipes.com/recipe/221162/minute-steaks-with-barbeque-butter-sauce/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/256662/jackfruit-curry-kathal-subzi/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/14069/vegan-lasagna-i/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/77215/roasted-beets-n-sweets/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/212636/japanese-beef-stir-fry/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/220067/3-cheese-eggplant-lasagna/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/273326/parmesan-crusted-shrimp-scampi-with-pasta/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/230117/gluten-free-thanksgiving-stuffing/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/88921/shrimp-wellington/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/268669/creamy-shrimp-scampi-with-half-and-half/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/257914/taro-boba-tea/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/193307/easy-mochi/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/266015/boba-coconut-milk-black-tea-with-tapioca-pearls/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/222340/chef-johns-roast-christmas-goose/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/109297/cedar-planked-salmon/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/132814/easy-yet-romantic-filet-mignon/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/212892/alligator-animal-italian-bread/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/232908/chef-johns-meatless-meatballs/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/235901/peppercorn-roast-beef/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/255545/ground-turkey-taco-meat/'
-        # recipe_url = 'https://www.allrecipes.com/recipe/16409/spinach-and-strawberry-salad/'
 
         if recipe_url == 'q':
             return
@@ -321,7 +304,11 @@ def main():
             for i,o in enumerate(options):
                 print(f'[{i}] {o}')
 
-            n = int(input('\nWhat do you want to do with it?\n'))
+            try:
+                n = int(input('\nWhat do you want to do with it?\n'))
+            except Exception:
+                print('Please enter a valid number.')
+                continue
 
             if n == 0:
                 return
