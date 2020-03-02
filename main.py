@@ -272,6 +272,7 @@ def reconstruct_directions(directions, original = False):
 
 def main():
     nltk.download('punkt')
+    nltk.download('averaged_perceptron_tagger')
     while True:
         recipe_url = input("Please enter the URL of a recipe from allrecipes.com or enter [q] to quit.\n")
 
