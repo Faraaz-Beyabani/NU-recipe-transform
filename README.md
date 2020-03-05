@@ -13,7 +13,7 @@ If not on Windows, please create and activate a virtual environment (typically t
 
 /////////////////////////////////////
 
-Options: Make it vegetarian, make it non-vegetarian, make it healthier, make it unhealthier, make it Japanese style, make it Indian style, Dduble the servings, halve the servings.
+Options: Make it vegetarian, make it non-vegetarian, make it healthier, make it unhealthier, make it Japanese style, make it Indian style, Double the servings, halve the servings.
 
 Make it vegetarian replaces meats with certain meat substitutes, such as tofu and related products, or the Impossible Ground Beef Burger (TM).
 
