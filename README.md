@@ -9,6 +9,8 @@ If not on Windows, please create and activate a virtual environment (typically t
 
 `pip install -r requirements.txt`
 
+* To run the program, use `python main.py`
+
 /////////////////////////////////////
 
 Options: Make it vegetarian, make it non-vegetarian, make it healthier, make it unhealthier, make it Japanese style, make it Indian style, Dduble the servings, halve the servings.
